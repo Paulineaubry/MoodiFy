@@ -5,7 +5,7 @@
 
 Projet réalisé dans le cadre de la formation Data Analyst à la Wild Code School.  
 Objectif : créer un moteur de recommandation musicale basé sur l’**humeur**, l’**activité** ou une **chanson donnée**, à partir d’un dataset Spotify enrichi.
-
+Suite à l'étude de marché nous observons l'importance des genres et des tranches d'age dans l'écoute de musique en streaming des français. Nous faisons donc un choix par répartition en ce sens.
 ---
 
 ## Fonctionnalités prévues
@@ -58,7 +58,7 @@ Objectif : créer un moteur de recommandation musicale basé sur l’**humeur**,
 
 ## 📌 À venir
 
-- 
+- Analyse de corrélation après enrichissement
 - Enrichissement via API Spotify & Last.fm (tags `mood` et `activity`)
 - Implémentation des 3 systèmes de recommandation
 - Interface utilisateur (Streamlit ou autre)
