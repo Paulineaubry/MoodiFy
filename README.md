@@ -36,10 +36,10 @@ Suite à l'étude de marché nous observons l'importance des genres et des tranc
 
 
 ## En cours
--Enrichissement des noms d'album
--Enrichissement des dates de sorties
--Enrichissement des pochettes
--Enrichissement des paroles
+- Enrichissement des noms d'album
+- Enrichissement des dates de sorties
+- Enrichissement des pochettes
+- Enrichissement des paroles
 
 
 ---
