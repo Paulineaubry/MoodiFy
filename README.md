@@ -16,18 +16,37 @@ Objectif : créer un moteur de recommandation musicale basé sur l’**humeur**,
 
 ---
 
+## 👥 Équipe
+
+- Hassan Saleban
+- Bertrand Devulder
+- Gaëlle Giovanazzi
+- Pauline Aubry
+  
 ## Avancement
 
-- Nettoyage et analyse exploratoire du dataset Spotify
-- Suppression des colonnes peu fiables (`genre`), remplacement de valeurs nulles
-- Ajout du vrai nom des titres via l’URI Spotify
-- Enrichissement en cours via API Spotify & Last.fm (tags `mood` et `activity`)
+- Etude de marché : Étude de marché.pdf
+- Repartition par genre musical et tranche d'age: A AJOUTER
+- Analyse exploratoire du dataset Spotify : notebook: moodify_preparation.ipynb
+- Nettoyage des valeurs aberrantes : script: clean_data.py
+- Suppression de la colonne peu fiable (`genre`), remplacement de valeurs nulles : script: clean_data.py
+- Analyse de corrélation préliminaire
+- Enrichissement avec vrai nom des genres via l’URI Spotify :  script: genre_par_artist.py
+- DF de 10000 lignes les plus populaires après clean: df_test.csv 
+
+
+## En cours
+-Enrichissement des noms d'album
+-Enrichissement des dates de sorties
+-Enrichissement des pochettes
+-Enrichissement des paroles
+
 
 ---
 
 ## Technologies
 
-- Python, Pandas, Scikit-learn
+- Python, Pandas
 - APIs : Spotify, Last.fm
 - Jupyter Notebook
 
@@ -35,21 +54,12 @@ Objectif : créer un moteur de recommandation musicale basé sur l’**humeur**,
 
 ## 📁 Structure du repo
 
-
----
-
-## 👥 Équipe
-
-- Hassan Saleban
-- Bertrand Devulder
-- Gaëlle Giovanazzi
-- Pauline Aubry
-
 ---
 
 ## 📌 À venir
 
-- Finalisation du tagging humeur/activité
+- 
+- Enrichissement via API Spotify & Last.fm (tags `mood` et `activity`)
 - Implémentation des 3 systèmes de recommandation
 - Interface utilisateur (Streamlit ou autre)
 
