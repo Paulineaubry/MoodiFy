@@ -1,28 +1,69 @@
-# MoodiFy
+
+# MoodiFy – Recommandation Musicale Contextuelle
+
+## Contexte
+
+Projet réalisé dans le cadre de la formation Data Analyst à la Wild Code School.  
+Objectif : créer un moteur de recommandation musicale basé sur l’**humeur**, l’**activité** ou une **chanson donnée**, à partir d’un dataset Spotify enrichi.
+Suite à l'étude de marché nous observons l'importance des genres et des tranches d'age dans l'écoute de musique en streaming des français. Nous faisons donc un choix par répartition en ce sens.
+---
+
+## Fonctionnalités prévues
+
+- **Song-to-Song** : recommandation de morceaux similaires.
+- **Mood-to-Playlist** : génération de playlists en fonction d’une humeur.
+- **Activity-to-Playlist** : playlist adaptée à une activité (travail, sport, etc.).
+
+---
+
+## 👥 Équipe
+
+- Hassan Saleban
+- Bertrand Devulder
+- Gaëlle Giovanazzi
+- Pauline Aubry
+  
+## Avancement
+
+- Etude de marché : Étude de marché.pdf
+- Repartition par genre musical et tranche d'age: A AJOUTER
+- Analyse exploratoire du dataset Spotify : notebook: moodify_preparation.ipynb
+- Nettoyage des valeurs aberrantes : script: clean_data.py
+- Suppression de la colonne peu fiable (`genre`), remplacement de valeurs nulles : script: clean_data.py
+- Analyse de corrélation préliminaire
+- Enrichissement avec vrai nom des genres via l’URI Spotify :  script: genre_par_artist.py
+- DF de 10000 lignes les plus populaires après clean: df_test.csv 
 
 
-## Objectif & Enjeux
-Vous êtes un AI Engineer junior freelance. Une start-up française spécialisée dans les applications musicales vous contacte. Elle souhaite lancer une nouvelle application qui se démarque de la concurrence par ses recommandations musicales innovantes.
+## En cours
+- Enrichissement des noms d'album
+- Enrichissement des dates de sorties
+- Enrichissement des pochettes
+- Enrichissement des paroles
 
-La start-up vous demande de développer trois fonctionnalités principales :
 
-### Song-to-Song : 
-      Recommander des chansons similaires à partir d’une chanson sélectionnée par l’utilisateur
-### Mood-to-Playlist : 
-Générer une playlist adaptée à l’humeur exprimée par l’utilisateur (joyeux, mélancolique, énergique, etc.)
-### Activity-to-Playlist : 
-Proposer une playlist adaptée à une activité spécifique (sport, méditation, travail, conduite, etc.)
-Pour mener à bien ce projet, la start-up vous fournit un accès au dataset public de Spotify, mais celui-ci présente un défi majeur : il ne contient pas de données explicites sur l’humeur ou les activités associées aux chansons. Vous devrez donc enrichir ces données pour répondre aux objectifs du projet.
+---
 
-Commencez par une étude de marché sur les habitudes d’écoute musicale des français et sur les applications de recommandation musicale existantes. Cette analyse vous permettra de mieux comprendre les attentes des utilisateurs et de positionner votre solution de manière pertinente.
+## Technologies
 
-Après cette étude, réalisez une analyse approfondie de la base de données Spotify pour identifier les corrélations entre les caractéristiques audio et les perceptions humaines. Cette exploration devrait inclure : l’analyse des attributs audio (tempo, énergie, dansabilité, etc.), l’évolution des préférences musicales au fil du temps, la popularité des genres musicaux, et les caractéristiques communes aux titres les plus écoutés.
+- Python, Pandas
+- APIs : Spotify, Last.fm
+- Jupyter Notebook
 
-Sur la base de ces informations, vous devrez développer une stratégie d’enrichissement des données pour attribuer des “tags” d’humeur et d’activité aux chansons de la base de données.
+---
 
-# ressources:
-- Spotify Dataset sur Kaggle: https://www.kaggle.com/datasets/zaheenhamidani/ultimate-spotify-tracks-db?resource=download
-- Documentation de l’API Spotify: https://developer.spotify.com/documentation/web-api
-- ressource complémentaire : http://millionsongdataset.com/
-- pour l’enrichissement des données : https://musicbrainz.org/
-- pour les tags communautaires : https://www.last.fm/api
+## 📁 Structure du repo
+
+---
+
+## 📌 À venir
+
+- Analyse de corrélation après enrichissement
+- Enrichissement via API Spotify & Last.fm (tags `mood` et `activity`)
+- Implémentation des 3 systèmes de recommandation
+- Interface utilisateur (Streamlit ou autre)
+
+---
+
+
+

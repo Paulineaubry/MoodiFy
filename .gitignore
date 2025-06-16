@@ -1,0 +1,6 @@
+venv_moodify/
+.env
+.cache
+*.csv
+*.swp
+
