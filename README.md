@@ -40,10 +40,10 @@ Objectif : créer un moteur de recommandation musicale basé sur l’**humeur**,
 
 ## 👥 Équipe
 
-- Alice Dupont
-- Bob Martin
-- Clara Meunier
-- David Morel
+- Hassan Saleban
+- Bertrand Devulder
+- Gaëlle Giovanazzi
+- Pauline Aubry
 
 ---
 
