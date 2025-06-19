@@ -1,3 +1,9 @@
+---
+noteId: "44ab90804d4211f0a1c3f91a7b6b107a"
+tags: []
+
+---
+
 # MoodiFy
 
 https://wildcodeschool.github.io/data-training-resources/projet/projet2_music/#introduction
