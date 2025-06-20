@@ -6,7 +6,7 @@ from tqdm import tqdm
 import numpy as np
 
 # Chargement du CSV de base
-df = pd.read_csv("SpotifyFeatures.csv")
+df = pd.read_csv("df_fr.csv")
 
 # Remplissage de la valeur nulle
 df = df.fillna('None')
@@ -55,9 +55,6 @@ df = df[df['time_signature'].isin([1, 3, 4, 5])]
 # Pour chaque titre de chanson unique (track_name) sélectionne la ligne ayant la popularité maximale (popularity) dans le DataFrame df
 df = df.loc[df.groupby('track_name')['popularity'].idxmax()]
 
-# On décide de ne garder que les scores au dessus de 20/100 de popularité.
-df = df[df['popularity'] >= 20] 
-
 # duration_ms entre 1min et 6min
 df = df[(df['duration_ms'] >= 60000) & (df['duration_ms'] <= 360000)]
 
@@ -74,9 +71,15 @@ df = df[(df['tempo'] >= 23.82) & (df['tempo'] <= 208.20)]
 df = df[df['loudness'] <= 0]
 
 # Clean des possibles podcasts/conférences au dela de 0.66 sur speechiness
-df_clean = df[df['speechiness']<=0.66]
+df = df[df['speechiness']<=0.66]
 
-df_clean.to_csv("clean.csv", index=False)
+# Selection des 10000 titres les plus populaires
+df_clean = df.sort_values(by='popularity', ascending=False).head(10000)
+
+# Transformation en CSV
+df_clean.to_csv("clean_fr.csv", index=False)
+
+
 
 
 
