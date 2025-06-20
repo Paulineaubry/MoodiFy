@@ -6,7 +6,7 @@ from tqdm import tqdm
 import numpy as np
 
 # Chargement du CSV de base
-df = pd.read_csv("df_fr.csv")
+df = pd.read_csv("SpotifyFeatures.csv")
 
 # Remplissage de la valeur nulle
 df = df.fillna('None')
