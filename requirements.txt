@@ -6,6 +6,7 @@ cycler==0.12.1
 fonttools==4.58.2
 idna==3.10
 kiwisolver==1.4.8
+langdetect==1.0.9
 matplotlib==3.10.3
 numpy==2.2.6
 packaging==25.0
@@ -15,6 +16,7 @@ pyparsing==3.2.3
 python-dateutil==2.9.0.post0
 python-dotenv==1.1.0
 pytz==2025.2
+ratelimit==2.2.1
 redis==6.2.0
 requests==2.32.4
 seaborn==0.13.2

@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import requests
 from tqdm import tqdm
 import numpy as np
+import re
 
 # Chargement du CSV de base
 df = pd.read_csv("SpotifyFeatures.csv")
@@ -49,11 +50,15 @@ df= df.loc[df.groupby(['track_name', 'artist_name'])['popularity'].idxmax()]
 
 # Extraire uniquement le numérateur de la signature [2, 3, 4, 5] pour en faire une colonne numérique propre.
 # Étape 1 : Extraire la partie avant le '/' et la convertir en entier
-df['time_signature'] = df['time_signature'].str.extract(r'^(\d+)').astype('Int64')
-df = df[df['time_signature'].isin([1, 3, 4, 5])]
+df['time_signature_clean'] = df['time_signature'].str.extract(r'^(\d+)').astype('Int64')
+df['time_signature'] = df['time_signature_clean']
+df = df[df['time_signature'].isin([2, 3, 4, 5])]
 
 # Pour chaque titre de chanson unique (track_name) sélectionne la ligne ayant la popularité maximale (popularity) dans le DataFrame df
 df = df.loc[df.groupby('track_name')['popularity'].idxmax()]
+
+# On décide de ne garder que les scores au dessus de 20/100 de popularité.
+df = df[df['popularity'] >= 20] 
 
 # duration_ms entre 1min et 6min
 df = df[(df['duration_ms'] >= 60000) & (df['duration_ms'] <= 360000)]
@@ -64,22 +69,39 @@ df = df[df['liveness'] < 0.8]
 # Retire les lignes qui contiennent ces motifs: "- live", "(live)", "[live]"
 df = df[~df['track_name'].str.contains(r"(?:-\s*live\b|\(live\)|\[live\])", case=False, na=False, regex=True)]
 
+# Fonction de normalisation du titre
+def normalize_title(title):
+    title = title.lower()
+    title = re.sub(r'\(.*?\)', '', title)              # Supprimer contenu entre parenthèses
+    title = re.sub(r'remastered.*', '', title)         # Supprimer "remastered" et ce qui suit
+    title = re.sub(r'\d{4}', '', title)                # Supprimer les années
+    title = re.sub(r'[^a-z0-9\s]', '', title)          # Supprimer ponctuation
+    title = re.sub(r'\s+', ' ', title).strip()         # Nettoyer les espaces
+    return title
+
+# Appliquer la fonction
+df['normalized_title'] = df['track_name'].apply(normalize_title)
+
+# Garder le plus populaire par artiste + titre normalisé
+df = (
+    df.sort_values('popularity', ascending=False)
+      .drop_duplicates(subset=['artist_name', 'normalized_title'], keep='first')
+)
+
+# Supprimer la colonne temporaire
+df = df.drop(columns=['normalized_title'])
+
 # Clean en gardant les valeurs entre les bornes
 df = df[(df['tempo'] >= 23.82) & (df['tempo'] <= 208.20)]
 
 # Clean des valeurs incohérentes de loudness au dessus de 0
 df = df[df['loudness'] <= 0]
 
+
 # Clean des possibles podcasts/conférences au dela de 0.66 sur speechiness
-df = df[df['speechiness']<=0.66]
+df_clean = df[df['speechiness']<=0.66]
 
-# Selection des 10000 titres les plus populaires
-df_clean = df.sort_values(by='popularity', ascending=False).head(10000)
-
-# Transformation en CSV
-df_clean.to_csv("clean_fr.csv", index=False)
-
-
+df_clean.to_csv("clean.csv", index=False)
 
 
 
