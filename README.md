@@ -30,7 +30,7 @@ Nous faisons donc un choix par répartition en ce sens... Non, non non ! Notre p
 - Une **répartition des préférences par tranche d’âge** et **genre musical**
 - Un **focus sur les genres francophones** pour mieux refléter les goûts locaux
 
-## 🛠️ Installation & Configuration
+## Installation & Configuration
 
 ### Prérequis
 - Python 3.10+
