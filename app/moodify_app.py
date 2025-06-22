@@ -85,6 +85,3 @@ if st.button('Générer Playlist'):
         st.dataframe(playlist[['artist_name', 'track_name', 'popularity', 'danceability']])
     else:
         st.write("Aucune piste trouvée pour les critères sélectionnés.")
-
-
-
