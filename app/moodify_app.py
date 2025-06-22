@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 
 # Charger les données
-df = pd.read_csv('df_final.csv')
+df = pd.read_csv('../data/df_final.csv')
 
 # Vérifiez les colonnes et ajustez si nécessaire
 if 'mood_tag' not in df.columns:
@@ -11,7 +11,7 @@ if 'activity_tag' not in df.columns:
     df['activity_tag'] = df['tags_activité'].str.split('/').str[0].str.strip('#')
 
 # Interface utilisateur
-st.title("🎧 Application de recommandation musicale")
+st.title("Application de recommandation musicale")
 
 # Sélection aléatoire de quelques pistes pour la démonstration
 sampled_tracks = df.sample(10)
