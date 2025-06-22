@@ -17,18 +17,6 @@ load_dotenv()
 # pour créer des playlists publique et privée
 SCOPE = "playlist-modify-public playlist-modify-private"
 
-# Récupère les caractéristiques audio pour une liste de tracks via l'API spotify
-@st.cache_data
-def get_audio_features_for_tracks(track_ids):
-    try:
-        # Limiter à 50 tracks maximum (limite de l'API Spotify)
-        track_ids_clean = [extract_track_id(tid) for tid in track_ids[:50]]
-        features = sp.audio_features(track_ids_clean)
-        return [f for f in features if f is not None]
-    except Exception as e:
-        print(f"Erreur récupération audio features : {e}")
-        return []
-
 # Sélectionne des tracks avec des caractéristiques audio diverses
 def select_diverse_tracks(df_genre, n_tracks=5):
     # Colonnes des caractéristiques audio (à adapter selon votre dataset)
@@ -159,9 +147,6 @@ def get_spotify_client():
 # Instance globale du client Spotify réutilisée dans toute l'application
 sp = get_spotify_client()
 
-def extract_track_id(uri_or_id):
-    return uri_or_id.split(':')[-1] if ':' in uri_or_id else uri_or_id
-
 # Récupère l'URL de la couverture d'album via l'API Spotify et la met en cache
 # show_spinner=False évite d'afficher le loader pendant le chargement des images
 @st.cache_data(show_spinner=False)
@@ -207,7 +192,7 @@ def create_spotify_playlist(track_ids, playlist_name):
     user_id = sp_local.current_user()["id"]
     playlist = sp_local.user_playlist_create(user=user_id, name=playlist_name, public=True)
 
-    track_uris = [f"spotify:track:{extract_track_id(tid)}" for tid in track_ids]
+    track_uris = [f"spotify:track:" for tid in track_ids]
     sp_local.playlist_add_items(playlist_id=playlist["id"], items=track_uris)
 
     return playlist["external_urls"]["spotify"]
@@ -227,6 +212,9 @@ required_cols = {'tags_humeur', 'tags_activité', 'track_name', 'artist_name', '
 if not required_cols.issubset(df.columns):
     st.error("Certaines colonnes essentielles sont manquantes dans le fichier CSV.")
     st.stop()
+
+# CSS personnalisé pour le design de l'application
+
 
 # Configuration de la page Streamlit (titre, layout large, sidebar ouverte par défaut)
 st.set_page_config(page_title="Ecoute Cha !!!", layout="wide", initial_sidebar_state="expanded")
