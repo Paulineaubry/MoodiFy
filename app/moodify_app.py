@@ -23,11 +23,8 @@ def load_custom_css():
     @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
 
     :root {
-        --bg-dark: #4a2e7a;
-        --bg-mid: #6a4c93;
-        --bg-light: #8a6db8;
-
-        --highlight: #ffec99;
+        --bg-top: #7a5ba2;
+        --bg-bottom: #e8b4e0;
 
         --console-base: #d8c3e0;
         --console-shadow: #b8a3c0;
@@ -41,7 +38,7 @@ def load_custom_css():
         --disgust: #4CAF50;
         --fear: #B084CC;
 
-        --gradient-bg: radial-gradient(circle at 10% 20%, var(--highlight) 10%, transparent 20%), linear-gradient(135deg, var(--bg-dark), var(--bg-mid), var(--bg-light));
+        --gradient-bg: linear-gradient(to bottom, var(--bg-top), var(--bg-bottom));
     }
 
     body, .stApp {
@@ -149,6 +146,7 @@ def load_custom_css():
     }
     </style>
     """, unsafe_allow_html=True)
+
 
 
 
