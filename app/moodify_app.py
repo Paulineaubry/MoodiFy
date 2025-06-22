@@ -17,46 +17,48 @@ load_dotenv()
 # pour créer des playlists privées et publiques
 SCOPE = "playlist-modify-public playlist-modify-private"
 
-# design de l'app
 def load_custom_css():
     st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
 
     :root {
-        --serenity-dark: #2E4A54;
-        --serenity-mid: #3F6C6A;
-        --lavender-deep: #3D3B56;
-        --lavender-fade: #5E6580;
+        --bg-dark: #4a2e7a;
+        --bg-mid: #6a4c93;
+        --bg-light: #8a6db8;
 
-        --text-primary: #FFFFFF;
-        --text-secondary: #D3D4DD;
-        --accent: #A8DADC;
-        --border: #5A6A77;
+        --highlight: #ffec99;
 
-        --card-bg: #40465A;
-        --secondary-bg: #3A4A55;
+        --console-base: #d8c3e0;
+        --console-shadow: #b8a3c0;
 
-        --gradient-mood: linear-gradient(135deg, var(--serenity-dark), var(--serenity-mid));
-        --gradient-card: linear-gradient(145deg, var(--card-bg), var(--secondary-bg));
+        --text-primary: #333333;
+        --text-secondary: #8a6db8;
+
+        --joy: #78c4d4;
+        --sadness: #4A90E2;
+        --anger: #D62828;
+        --disgust: #4CAF50;
+        --fear: #B084CC;
+
+        --gradient-bg: radial-gradient(circle at 10% 20%, var(--highlight) 10%, transparent 20%), linear-gradient(135deg, var(--bg-dark), var(--bg-mid), var(--bg-light));
     }
 
     body, .stApp {
-        background: var(--gradient-mood);
+        background: var(--gradient-bg);
         font-family: 'Segoe UI', sans-serif;
         color: var(--text-primary);
     }
 
     h1, h2, h3 {
-        font-family: 'Segoe UI', sans-serif !important;
         font-weight: 600 !important;
-        color: var(--text-primary) !important;
+        color: var(--joy) !important;
         text-align: center;
         text-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
     }
 
     .song-title {
-        color: var(--text-primary);
+        color: var(--joy);
         font-size: 1.4rem;
         font-weight: 500;
         text-align: center;
@@ -64,64 +66,59 @@ def load_custom_css():
     }
 
     .song-title:hover {
-        color: var(--accent);
+        color: var(--joy);
         transition: color 0.3s ease;
     }
 
     .stButton > button {
-        background: var(--gradient-card) !important;
-        border: 1px solid var(--accent) !important;
+        background: var(--console-base) !important;
+        border: 2px solid var(--text-primary) !important;
         border-radius: 20px !important;
         padding: 0.6rem 1.5rem !important;
         color: var(--text-primary) !important;
         font-weight: 500 !important;
         transition: all 0.3s ease !important;
-        font-family: 'Segoe UI', sans-serif !important;
     }
 
     .stButton > button:hover {
-        background: var(--accent) !important;
-        color: #1E1E1E !important;
+        background: var(--joy) !important;
+        color: var(--text-primary) !important;
         transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(168, 218, 220, 0.3);
+        box-shadow: 0 8px 20px rgba(120, 196, 212, 0.4);
     }
 
     .track-item, .selection-card {
-        background: var(--gradient-card);
+        background: var(--console-base);
         border-radius: 15px;
         padding: 1rem;
         margin: 0.5rem 0;
-        border: 1px solid var(--border);
+        border: 1px solid var(--console-shadow);
         transition: all 0.3s ease;
     }
 
     .track-item:hover, .selection-card:hover {
         transform: translateY(-3px);
         box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
-        border-color: var(--accent);
+        border-color: var(--joy);
     }
 
-    .stSelectbox > div > div {
-        background: var(--card-bg) !important;
-        border: 1px solid var(--border) !important;
-        border-radius: 10px !important;
+    .stSuccess {
+        background: var(--console-base) !important;
+        border-left: 4px solid var(--joy) !important;
         color: var(--text-primary) !important;
+        border-radius: 10px;
     }
 
-    .stSelectbox > div > div > div {
-        background: #4B5563 !important;
+    .stWarning {
+        background: var(--console-base) !important;
+        border-left: 4px solid var(--fear) !important;
         color: var(--text-primary) !important;
+        border-radius: 10px;
     }
 
-    .css-1d391kg, .stSidebar {
-        background: var(--lavender-deep) !important;
-        border-right: 1px solid var(--border) !important;
-        color: var(--text-primary);
-    }
-
-    .stSuccess, .stWarning, .stError {
-        background: var(--gradient-card) !important;
-        border-left: 4px solid var(--accent) !important;
+    .stError {
+        background: var(--console-base) !important;
+        border-left: 4px solid var(--anger) !important;
         color: var(--text-primary) !important;
         border-radius: 10px;
     }
@@ -139,10 +136,10 @@ def load_custom_css():
     .footer-style {
         text-align: center !important;
         padding: 1.5rem !important;
-        background: var(--gradient-card) !important;
+        background: var(--console-base) !important;
         border-radius: 15px !important;
         margin-top: 2rem !important;
-        border: 1px solid var(--border) !important;
+        border: 1px solid var(--console-shadow) !important;
     }
 
     .footer-style p {
@@ -152,6 +149,7 @@ def load_custom_css():
     }
     </style>
     """, unsafe_allow_html=True)
+
 
 
 def select_diverse_tracks(df_genre, n_tracks=5):

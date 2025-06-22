@@ -1,0 +1,310 @@
+@import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+
+:root {
+        /* Palette Vice-Versa */
+        --joy-yellow: #FFD700;
+        --joy-yellow-light: #FFF3A0;
+        --sadness-blue: #4A90E2;
+        --sadness-blue-deep: #2E5BBA;
+        --disgust-green: #7CB342;
+        --disgust-green-light: #A5D6A7;
+        --anger-red: #E74C3C;
+        --anger-red-deep: #C0392B;
+        --fear-purple: #9B59B6;
+        --fear-purple-deep: #6A4C93;
+        
+        /* Fond exactement comme l'image - violet/mauve profond */
+        --background-main: #6B5B95;
+        --background-dark: #574B7A;
+        --background-light: #7D6BAF;
+        --background-accent: #8B7BB8;
+        
+        /* Couleurs du tableau de bord pour les textes */
+        --dashboard-cream: #F5F2E8;
+        --dashboard-light: #E8E5D3;
+        --dashboard-button: #D4CFC0;
+        --dashboard-panel: #C8C3B4;
+        
+        /* Éléments lumineux du tableau */
+        --control-light-blue: #A8D8EA;
+        --control-light-green: #B8E6B8;
+        --control-light-yellow: #FFF59D;
+        --control-light-orange: #FFCC80;
+        --control-light-red: #FFAB91;
+        
+        /* Textes - couleurs du tableau de bord */
+        --text-primary: var(--dashboard-cream);
+        --text-secondary: var(--dashboard-light);
+        --text-accent: var(--control-light-yellow);
+        
+        /* Bordures et accents */
+        --border-light: var(--dashboard-panel);
+        --border-glow: var(--control-light-yellow);
+        
+        /* Cartes et surfaces - tons du tableau */
+        --card-bg: rgba(245, 242, 232, 0.15);
+        --card-hover: rgba(245, 242, 232, 0.25);
+        --secondary-bg: rgba(212, 207, 192, 0.1);
+        
+        /* Gradients adaptés au fond violet */
+        --gradient-main: linear-gradient(135deg, var(--background-dark), var(--background-main), var(--background-light));
+        --gradient-card: linear-gradient(145deg, var(--card-bg), var(--card-hover));
+        --gradient-joy: linear-gradient(135deg, var(--control-light-yellow), var(--joy-yellow-light));
+        --gradient-memory: radial-gradient(circle, var(--control-light-yellow), var(--control-light-blue));
+    }
+
+    body, .stApp {
+        background: var(--gradient-main);
+        font-family: 'Segoe UI', sans-serif;
+        color: var(--text-primary);
+        position: relative;
+    }
+
+    /* Effet de particules flottantes comme les lumières du tableau */
+    body::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: 
+            radial-gradient(circle at 20% 20%, rgba(255, 245, 157, 0.1) 0%, transparent 50%),
+            radial-gradient(circle at 80% 60%, rgba(168, 216, 234, 0.1) 0%, transparent 50%),
+            radial-gradient(circle at 40% 80%, rgba(184, 230, 184, 0.1) 0%, transparent 50%),
+            radial-gradient(circle at 60% 30%, rgba(255, 204, 128, 0.1) 0%, transparent 50%);
+        pointer-events: none;
+        z-index: -1;
+    }
+
+    h1, h2, h3 {
+        font-family: 'Segoe UI', sans-serif !important;
+        font-weight: 600 !important;
+        color: var(--dashboard-cream) !important;
+        text-align: center;
+        text-shadow: 0 0 10px rgba(255, 245, 157, 0.3), 0 2px 6px rgba(0, 0, 0, 0.3);
+    }
+
+    .song-title {
+        color: var(--dashboard-cream);
+        font-size: 1.4rem;
+        font-weight: 500;
+        text-align: center;
+        margin: 0.5rem 0;
+        text-shadow: 0 0 8px rgba(255, 245, 157, 0.2);
+    }
+
+    .song-title:hover {
+        color: var(--control-light-yellow);
+        transition: all 0.3s ease;
+        text-shadow: 0 0 15px rgba(255, 245, 157, 0.4);
+    }
+
+    .stButton > button {
+        background: var(--gradient-card) !important;
+        border: 2px solid var(--dashboard-button) !important;
+        border-radius: 25px !important;
+        padding: 0.8rem 2rem !important;
+        color: var(--dashboard-cream) !important;
+        font-weight: 600 !important;
+        transition: all 0.3s ease !important;
+        font-family: 'Segoe UI', sans-serif !important;
+        position: relative;
+        overflow: hidden;
+        backdrop-filter: blur(10px);
+    }
+
+    .stButton > button::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, var(--control-light-yellow), var(--control-light-blue));
+        transition: left 0.3s ease;
+        z-index: -1;
+    }
+
+    .stButton > button:hover {
+        color: var(--background-dark) !important;
+        transform: translateY(-3px) scale(1.05);
+        box-shadow: 
+            0 10px 25px rgba(245, 242, 232, 0.2),
+            0 0 20px rgba(255, 245, 157, 0.3);
+        border-color: var(--control-light-yellow) !important;
+    }
+
+    .stButton > button:hover::before {
+        left: 0;
+    }
+
+    .track-item, .selection-card {
+        background: var(--gradient-card);
+        border-radius: 20px;
+        padding: 1.5rem;
+        margin: 0.8rem 0;
+        border: 2px solid var(--dashboard-button);
+        transition: all 0.4s ease;
+        position: relative;
+        overflow: hidden;
+        backdrop-filter: blur(15px);
+        color: var(--dashboard-cream);
+    }
+
+    .track-item::before, .selection-card::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(255, 245, 157, 0.1) 0%, transparent 70%);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        pointer-events: none;
+    }
+
+    .track-item:hover, .selection-card:hover {
+        transform: translateY(-5px) scale(1.02);
+        box-shadow: 
+            0 15px 35px rgba(0, 0, 0, 0.4),
+            0 0 25px rgba(245, 242, 232, 0.2);
+        border-color: var(--control-light-yellow);
+    }
+
+    .track-item:hover::before, .selection-card:hover::before {
+        opacity: 1;
+    }
+
+    .stSelectbox > div > div {
+        background: var(--card-bg) !important;
+        border: 2px solid var(--dashboard-button) !important;
+        border-radius: 15px !important;
+        color: var(--dashboard-cream) !important;
+        transition: all 0.3s ease !important;
+        backdrop-filter: blur(10px) !important;
+    }
+
+    .stSelectbox > div > div:hover {
+        border-color: var(--control-light-yellow) !important;
+        box-shadow: 0 0 15px rgba(255, 245, 157, 0.2) !important;
+    }
+
+    .stSelectbox > div > div > div {
+        background: var(--secondary-bg) !important;
+        color: var(--dashboard-cream) !important;
+    }
+
+    .css-1d391kg, .stSidebar {
+        background: linear-gradient(180deg, var(--background-dark), var(--background-main)) !important;
+        border-right: 3px solid var(--dashboard-button) !important;
+        color: var(--dashboard-cream);
+        box-shadow: 5px 0 15px rgba(0, 0, 0, 0.3);
+    }
+
+    .stSuccess {
+        background: linear-gradient(135deg, var(--control-light-green), var(--disgust-green-light)) !important;
+        border-left: 5px solid var(--control-light-yellow) !important;
+        color: var(--background-dark) !important;
+        border-radius: 15px;
+        box-shadow: 0 0 20px rgba(184, 230, 184, 0.3);
+    }
+
+    .stWarning {
+        background: linear-gradient(135deg, var(--control-light-yellow), var(--control-light-orange)) !important;
+        border-left: 5px solid var(--dashboard-button) !important;
+        color: var(--background-dark) !important;
+        border-radius: 15px;
+        box-shadow: 0 0 20px rgba(255, 245, 157, 0.3);
+    }
+
+    .stError {
+        background: linear-gradient(135deg, var(--control-light-red), var(--anger-red)) !important;
+        border-left: 5px solid var(--control-light-yellow) !important;
+        color: var(--dashboard-cream) !important;
+        border-radius: 15px;
+        box-shadow: 0 0 20px rgba(255, 171, 145, 0.3);
+    }
+
+    img {
+        border-radius: 15px !important;
+        box-shadow: 
+            0 8px 20px rgba(0, 0, 0, 0.4),
+            0 0 15px rgba(245, 242, 232, 0.2) !important;
+        transition: all 0.4s ease !important;
+        border: 2px solid var(--dashboard-button) !important;
+    }
+
+    img:hover {
+        transform: scale(1.05) rotate(1deg) !important;
+        box-shadow: 
+            0 15px 35px rgba(0, 0, 0, 0.5),
+            0 0 25px rgba(255, 245, 157, 0.3) !important;
+        border-color: var(--control-light-yellow) !important;
+    }
+
+    .footer-style {
+        text-align: center !important;
+        padding: 2rem !important;
+        background: var(--gradient-card) !important;
+        border-radius: 20px !important;
+        margin-top: 2rem !important;
+        border: 2px solid var(--dashboard-button) !important;
+        position: relative;
+        overflow: hidden;
+        backdrop-filter: blur(15px);
+    }
+
+    .footer-style::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: radial-gradient(circle at center, rgba(255, 245, 157, 0.1) 0%, transparent 70%);
+        opacity: 0.3;
+        pointer-events: none;
+    }
+
+    .footer-style p {
+        color: var(--dashboard-light) !important;
+        font-style: italic !important;
+        font-size: 1.1rem !important;
+        text-shadow: 0 0 8px rgba(255, 245, 157, 0.2);
+        position: relative;
+        z-index: 1;
+    }
+
+    /* Animation des souvenirs flottants */
+    @keyframes float-memory {
+        0%, 100% { transform: translateY(0px) rotate(0deg); }
+        50% { transform: translateY(-10px) rotate(180deg); }
+    }
+
+    .memory-orb {
+        animation: float-memory 4s ease-in-out infinite;
+    }
+
+    /* Scrollbar personnalisée */
+    ::-webkit-scrollbar {
+        width: 12px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: var(--background-dark);
+        border-radius: 10px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: linear-gradient(135deg, var(--dashboard-button), var(--control-light-yellow));
+        border-radius: 10px;
+        border: 2px solid var(--background-dark);
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: var(--control-light-yellow);
+        box-shadow: 0 0 10px rgba(255, 245, 157, 0.3);
+    }
+
