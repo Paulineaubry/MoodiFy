@@ -25,20 +25,21 @@ def load_custom_css():
     :root {
         --bg-top: #7a5ba2;
         --bg-bottom: #e8b4e0;
-
+        --sidebar-bg-top: #1a1a40;
+        --sidebar-bg-bottom: #6a4c93;
+        --text-cream: #F5F5DC;
+        --selectbox-color: #8FAAC4;
+        --selectbox-border-color: #8FAAC4;
         --console-base: #d8c3e0;
         --console-shadow: #b8a3c0;
-
         --text-primary: #333333;
         --text-secondary: #8a6db8;
-
         --joy: #78c4d4;
         --sadness: #4A90E2;
-        --anger: #D62828;
         --disgust: #4CAF50;
         --fear: #B084CC;
-
         --gradient-bg: linear-gradient(to bottom, var(--bg-top), var(--bg-bottom));
+        --sidebar-gradient-bg: linear-gradient(to bottom, var(--sidebar-bg-top), var(--sidebar-bg-bottom));
     }
 
     body, .stApp {
@@ -47,9 +48,53 @@ def load_custom_css():
         color: var(--text-primary);
     }
 
+    /* Sidebar background */
+    [data-testid="stSidebar"] {
+        background: var(--sidebar-gradient-bg) !important;
+    }
+
+    /* Change the color of the selected item in the sidebar */
+    [data-testid="stSidebar"] .css-1lcbmhc {
+        color: white !important;
+    }
+
+    /* Remove the red background color from the selected item in the sidebar */
+    [data-testid="stSidebar"] .css-1lcbmhc:hover, [data-testid="stSidebar"] .css-1lcbmhc:focus, [data-testid="stSidebar"] .css-1lcbmhc:active {
+        background-color: transparent !important;
+    }
+
+    /* Change the color of the selection indicator in the sidebar */
+    [data-testid="stSidebar"] .css-14xtw73::before {
+        background-color: white !important;
+    }
+
+    /* Style for the selectbox dropdown */
+    .stSelectbox > div > div {
+        background-color: var(--selectbox-color) !important;
+        color: var(--text-primary) !important;
+        border: 2px solid var(--selectbox-border-color) !important;
+        border-radius: 20px !important;
+    }
+
+    /* Style for the selectbox dropdown in the sidebar */
+    [data-testid="stSidebar"] .stSelectbox > div > div {
+        color: white !important;
+    }
+
+    /* Style for the dropdown options */
+    .stSelectbox > div > div > div > div {
+        background-color: var(--selectbox-color) !important;
+        color: white !important;
+    }
+
+    /* Style for the radio button indicator */
+    [data-testid="stSidebar"] .stRadio > div > label > div[data-testid="stMarkdownContainer"] > div {
+        color: white !important;
+    }
+
     h1, h2, h3 {
         font-weight: 600 !important;
-        color: var(--joy) !important;
+        color: var(--text-cream) !important;
         text-align: center;
         text-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
     }
@@ -99,37 +144,6 @@ def load_custom_css():
         border-color: var(--joy);
     }
 
-    .stSuccess {
-        background: var(--console-base) !important;
-        border-left: 4px solid var(--joy) !important;
-        color: var(--text-primary) !important;
-        border-radius: 10px;
-    }
-
-    .stWarning {
-        background: var(--console-base) !important;
-        border-left: 4px solid var(--fear) !important;
-        color: var(--text-primary) !important;
-        border-radius: 10px;
-    }
-
-    .stError {
-        background: var(--console-base) !important;
-        border-left: 4px solid var(--anger) !important;
-        color: var(--text-primary) !important;
-        border-radius: 10px;
-    }
-
-    img {
-        border-radius: 10px !important;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
-        transition: transform 0.3s ease !important;
-    }
-
-    img:hover {
-        transform: scale(1.03) !important;
-    }
-
     .footer-style {
         text-align: center !important;
         padding: 1.5rem !important;
@@ -146,8 +160,6 @@ def load_custom_css():
     }
     </style>
     """, unsafe_allow_html=True)
-
-
 
 
 def select_diverse_tracks(df_genre, n_tracks=5):
@@ -454,6 +466,9 @@ elif choice == "Song-to-Song":
             with st.spinner("Sélection de chansons variées..."):
                 diverse_tracks = select_diverse_tracks(df_genre, 5)
                 st.session_state['diverse_tracks'] = diverse_tracks
+                # Lecteur intégré Spotify pour la chanson recommandée
+                embed_url = f"https://open.spotify.com/embed/track/{similar_track['track_id']}"
+                st.components.v1.iframe(embed_url, width=300, height=80)
 
         # Afficher les 5 tracks si elles existent
         if 'diverse_tracks' in st.session_state:
@@ -461,6 +476,7 @@ elif choice == "Song-to-Song":
 
             # Créer les colonnes pour l'affichage
             cols = st.columns(5)
+            
             selected_track_id = None
             for idx, (_, track) in enumerate(st.session_state['diverse_tracks'].iterrows()):
                 with cols[idx]:

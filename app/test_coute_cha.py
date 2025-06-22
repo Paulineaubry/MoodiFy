@@ -10,14 +10,163 @@ import plotly.express as px
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 
-# Chargement des variables d'environnement
-load_dotenv()
 
-# DÉFINITION DES PERMISSIONS SPOTIFY (SCOPE)
-# pour créer des playlists publique et privée
-SCOPE = "playlist-modify-public playlist-modify-private"
 
-# Sélectionne des tracks avec des caractéristiques audio diverses
+def load_custom_css():
+    st.markdown("""
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+
+    :root {
+        --bg-top: #7a5ba2;
+        --bg-bottom: #e8b4e0;
+        --sidebar-bg-top: #1a1a40;
+        --sidebar-bg-bottom: #6a4c93;
+        --text-cream: #F5F5DC;
+        --selectbox-color: #8FAAC4;
+        --selectbox-border-color: #8FAAC4;
+        --console-base: #d8c3e0;
+        --console-shadow: #b8a3c0;
+        --text-primary: #333333;
+        --text-secondary: #8a6db8;
+        --joy: #78c4d4;
+        --sadness: #4A90E2;
+        --disgust: #4CAF50;
+        --fear: #B084CC;
+        --gradient-bg: linear-gradient(to bottom, var(--bg-top), var(--bg-bottom));
+        --sidebar-gradient-bg: linear-gradient(to bottom, var(--sidebar-bg-top), var(--sidebar-bg-bottom));
+    }
+
+    body, .stApp {
+        background: var(--gradient-bg);
+        font-family: 'Segoe UI', sans-serif;
+        color: var(--text-primary);
+    }
+
+    /* Sidebar background */
+    [data-testid="stSidebar"] {
+        background: var(--sidebar-gradient-bg) !important;
+    }
+
+    /* Change the color of the selected item in the sidebar */
+    [data-testid="stSidebar"] .css-1lcbmhc {
+        color: white !important;
+    }
+
+    /* Remove the red background color from the selected item in the sidebar */
+    [data-testid="stSidebar"] .css-1lcbmhc:hover, [data-testid="stSidebar"] .css-1lcbmhc:focus, [data-testid="stSidebar"] .css-1lcbmhc:active {
+        background-color: transparent !important;
+    }
+
+    /* Change the color of the selection indicator in the sidebar */
+    [data-testid="stSidebar"] .css-14xtw73::before {
+        background-color: white !important;
+    }
+
+    /* Style for the selectbox dropdown */
+    .stSelectbox > div > div {
+        background-color: var(--selectbox-color) !important;
+        color: var(--text-primary) !important;
+        border: 2px solid var(--selectbox-border-color) !important;
+        border-radius: 20px !important;
+    }
+
+    /* Style for the selectbox dropdown in the sidebar */
+    [data-testid="stSidebar"] .stSelectbox > div > div {
+        color: white !important;
+    }
+
+    /* Style for the dropdown options */
+    .stSelectbox > div > div > div > div {
+        background-color: var(--selectbox-color) !important;
+        color: white !important;
+    }
+
+    /* Style for the radio button indicator */
+    [data-testid="stSidebar"] .stRadio > div > label > div[data-testid="stMarkdownContainer"] > div {
+        color: white !important;
+    }
+
+    h1, h2, h3 {
+        font-weight: 600 !important;
+        color: var(--text-cream) !important;
+        text-align: center;
+        text-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    }
+
+    .song-title {
+        color: var(--joy);
+        font-size: 1.4rem;
+        font-weight: 500;
+        text-align: center;
+        margin: 0.5rem 0;
+    }
+
+    .song-title:hover {
+        color: var(--joy);
+        transition: color 0.3s ease;
+    }
+
+    .stButton > button {
+        background: var(--console-base) !important;
+        border: 2px solid var(--text-primary) !important;
+        border-radius: 20px !important;
+        padding: 0.6rem 1.5rem !important;
+        color: var(--text-primary) !important;
+        font-weight: 500 !important;
+        transition: all 0.3s ease !important;
+    }
+
+    .stButton > button:hover {
+        background: var(--joy) !important;
+        color: var(--text-primary) !important;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(120, 196, 212, 0.4);
+    }
+
+    .track-item, .selection-card {
+        background: var(--console-base);
+        border-radius: 15px;
+        padding: 1rem;
+        margin: 0.5rem 0;
+        border: 1px solid var(--console-shadow);
+        transition: all 0.3s ease;
+    }
+
+    .track-item:hover, .selection-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+        border-color: var(--joy);
+    }
+
+    .footer-style {
+        text-align: center !important;
+        padding: 1.5rem !important;
+        background: var(--console-base) !important;
+        border-radius: 15px !important;
+        margin-top: 2rem !important;
+        border: 1px solid var(--console-shadow) !important;
+    }
+
+    .footer-style p {
+        color: var(--text-secondary) !important;
+        font-style: italic !important;
+        font-size: 1rem !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+
+
+
+
+
+
+
+
+
+# -------- Sélectionne des tracks avec des caractéristiques audio diverses -------- #
+
 def select_diverse_tracks(df_genre, n_tracks=5):
     # Colonnes des caractéristiques audio (à adapter selon votre dataset)
     audio_cols = ['danceability', 'energy', 'valence', 'acousticness', 'instrumentalness']
@@ -64,7 +213,8 @@ def select_diverse_tracks(df_genre, n_tracks=5):
     return df_genre.loc[diverse_tracks]
 
 
-# Trouve une track similaire basée sur les caractéristiques audio
+# -------- Trouve une track similaire basée sur les caractéristiques audio -------- #
+
 def find_similar_track(selected_track, df_genre, audio_features_cols):
     if not audio_features_cols:
         # Si pas de features audio, sélection aléatoire
@@ -87,7 +237,8 @@ def find_similar_track(selected_track, df_genre, audio_features_cols):
     return other_tracks.iloc[most_similar_idx]
 
 
-# Crée un graphique radar de comparaison des caractéristiques audio
+# -------- Crée un graphique radar de comparaison des caractéristiques audio -------- #
+
 def create_comparison_chart(track1, track2, audio_features_cols):
     if not audio_features_cols:
         return None
@@ -132,9 +283,10 @@ def create_comparison_chart(track1, track2, audio_features_cols):
     return fig
 
 
-# Crée et configure le client Spotify avec authentification OAuth une seule fois
-# @st.cache_resource évite de recréer la connexion à chaque rechargement de page
-@st.cache_resource
+# -------- Crée et configure le client Spotify avec authentification OAuth une seule fois -------- #
+
+@st.cache_resource          # évite de recréer la connexion à chaque rechargement de page
+
 def get_spotify_client():
     return spotipy.Spotify(auth_manager=SpotifyOAuth(
         scope=SCOPE,
@@ -144,12 +296,11 @@ def get_spotify_client():
         cache_path=".cache"
     ))
 
-# Instance globale du client Spotify réutilisée dans toute l'application
-sp = get_spotify_client()
 
-# Récupère l'URL de la couverture d'album via l'API Spotify et la met en cache
-# show_spinner=False évite d'afficher le loader pendant le chargement des images
-@st.cache_data(show_spinner=False)
+# -------- Récupère l'URL de la couverture d'album via l'API Spotify et la met en cache -------- #
+
+@st.cache_data(show_spinner=False)        # évite d'afficher le loader pendant le chargement des images
+
 def get_album_image_url_cached(track_id):
     try:
         track_info = sp.track(track_id)
@@ -162,7 +313,8 @@ def get_album_image_url_cached(track_id):
         return None
 
 
-# Convertit une durée en millisecondes au format lisible 
+# -------- Convertit une durée en millisecondes au format lisible -------- #
+
 def format_duration(total_ms):
     total_seconds = int(total_ms / 1000)
     hours = total_seconds // 3600
@@ -174,37 +326,65 @@ def format_duration(total_ms):
     else:
         return f"{minutes}min {seconds:02d}s"
 
-# Crée une nouvelle playlist publique sur Spotify avec les chansons données
-# Utilise show_dialog=True pour forcer la reconnexion si nécessaire
+
+# -------- Crée une nouvelle playlist publique sur Spotify avec les chansons données --------- #
+
 def create_spotify_playlist(track_ids, playlist_name):
+
+
+
+
     auth_manager = SpotifyOAuth(
         scope=SCOPE,
         client_id=os.getenv("SPOTIPY_CLIENT_ID"),
         client_secret=os.getenv("SPOTIPY_CLIENT_SECRET"),
         redirect_uri=os.getenv("SPOTIPY_REDIRECT_URI"),
-        show_dialog=True,
+        show_dialog=True, # forcer la reconnexion si nécessaire
         cache_path=".cache"
     )
 
+    # Crée un objet Spotify connecté avec l’authentification donnée
+    # Récupère l’identifiant de l’utilisateur connecté
+    # Crée une nouvelle playlist publique avec le nom donné pour cet utilisateur
+    # Prépare la liste des URI des chansons à ajouter dans la playlist
+    # Ajoute les chansons à la playlist créée
+    # Retourne le lien web pour accéder à la playlist sur Spotify
 
     sp_local = spotipy.Spotify(auth_manager=auth_manager)
-
     user_id = sp_local.current_user()["id"]
     playlist = sp_local.user_playlist_create(user=user_id, name=playlist_name, public=True)
-
-    track_uris = [f"spotify:track:" for tid in track_ids]
+    track_uris = [f"spotify:track:{tid}" for tid in track_ids]
     sp_local.playlist_add_items(playlist_id=playlist["id"], items=track_uris)
-
     return playlist["external_urls"]["spotify"]
 
+# -------- Charge le dataset des chansons depuis le fichier CSV et le met en cache -------- #
 
 @st.cache_data
-# Charge le dataset des chansons depuis le fichier CSV et le met en cache
 def load_data():
     return pd.read_csv('../data/df_final.csv')
 
+
+
+
+
+
+
+
+
+
+
+# Chargement des variables d'environnement
+load_dotenv()
+
+# DÉFINITION DES PERMISSIONS SPOTIFY (SCOPE)
+# pour créer des playlists publique et privée
+SCOPE = "playlist-modify-public playlist-modify-private"
+
+# START APPLICATION
 df = load_data()
 
+# Instance globale du client Spotify réutilisée dans toute l'application
+sp = get_spotify_client()
 
 # Vérification que toutes les colonnes essentielles sont présentes dans le CSV
 # Arrête l'application si des colonnes critiques manquent
@@ -213,18 +393,11 @@ if not required_cols.issubset(df.columns):
     st.error("Certaines colonnes essentielles sont manquantes dans le fichier CSV.")
     st.stop()
 
-# CSS personnalisé pour le design de l'application
-
+# Charge le fichier css pour le design de l'application
+load_custom_css()
 
 # Configuration de la page Streamlit (titre, layout large, sidebar ouverte par défaut)
 st.set_page_config(page_title="Ecoute Cha !!!", layout="wide", initial_sidebar_state="expanded")
-
-# CSS personnalisé pour styliser l'affichage des humeurs en gros caractères
-st.markdown("""
-<style>
-.mood-display {font-size: 2em; font-weight: bold; margin: 10px 0;}
-</style>
-""", unsafe_allow_html=True)
 
 # Interface principale de l'application
 st.title("Ecoute me Cha !!")
@@ -235,48 +408,105 @@ st.sidebar.markdown("## **Menu Musical**")
 choice = st.sidebar.radio("Navigation", ["Song-to-Song", "Mood-to-Playlist", "Activity-to-Playlist"], label_visibility="collapsed")
 
 
-# Fonctionnalité playlist selon l'humeur
+# ----- Fonctionnalité playlist selon l'humeur ----- #
+
 if choice == "Mood-to-Playlist":
+
+    # Affiche un titre pour la section humeur
+    # Permet à l'utilisateur de choisir un genre musical parmi ceux disponibles dans le dataframe
+    # Crée une liste triée des humeurs associées au genre sélectionné, sans doublons ni valeurs manquantes
+
     st.header("Playlist selon l'humeur choisie")
     selected_genre = st.selectbox("Choisissez un genre musical :", df['genre'].dropna().unique())
     humeurs_list = sorted(df[df['genre'] == selected_genre]['tags_humeur'].dropna().unique())
 
     if humeurs_list:
+
+        # Affiche un curseur pour sélectionner une humeur dans la liste
+        # Récupère l'humeur choisie selon la position du curseur
+        # Affiche l'humeur sélectionnée avec un style personnalisé
+
         mood_index = st.slider("Faites glisser pour choisir votre humeur", 0, len(humeurs_list)-1, len(humeurs_list)//2)
         selected_humeur = humeurs_list[mood_index]
         st.markdown(f"<div class='mood-display'>{selected_humeur}</div>", unsafe_allow_html=True)
 
         if st.button("Générer Playlist"):
+
+            # Affiche une animation de chargement pendant 1.5 secondes
             with st.spinner("Création en cours..."):
                 time.sleep(1.5)
+
+            # Filtre les chansons du genre et de l'humeur choisis, mélange aléatoirement et prend les 20 premières
             filtered_df = df[(df['genre'] == selected_genre) & (df['tags_humeur'] == selected_humeur)].sample(frac=1).head(20)
+
             if filtered_df.empty:
+                # Message si aucune chanson ne correspond
                 st.warning("Aucune chanson trouvée pour cette humeur.")
+
+                # Supprime les anciennes playlists de la session si elles existent
                 if 'playlist_df' in st.session_state:
                     del st.session_state['playlist_df']
                     del st.session_state['playlist_title']
+
+            # Stocke la playlist filtrée et son titre dans la session
             else:
                 st.session_state['playlist_df'] = filtered_df
                 st.session_state['playlist_title'] = f"Playlist {selected_humeur} - {selected_genre}"
 
+
+
     if 'playlist_df' in st.session_state:
+
+        # Calcule la durée totale de la playlist en millisecondes
         filtered_df = st.session_state['playlist_df']
         total_duration_ms = filtered_df['duration_ms'].sum()
+
+        # Affiche un message de succès avec le titre de la playlist
         st.success(f"Playlist générée pour : **{st.session_state['playlist_title']}**")
+
+        # Affiche des indicateurs : nombre de chansons et durée totale formatée
         st.metric("Nombre de titres", len(filtered_df))
         st.metric("Durée totale", format_duration(total_duration_ms))
 
         for i, row in enumerate(filtered_df.itertuples(), 1):
-            track_url = f"https://open.spotify.com/track/{row.track_id}"
-            image_url = get_album_image_url_cached(row.track_id)
-            col1, col2, col3 = st.columns([1, 4, 1])
-            with col1:
-                if image_url:
-                    st.image(image_url, width=60)
-            with col2:
-                st.markdown(f"{i}. [**{row.track_name}**]({track_url}) – *{row.artist_name}*")
-            with col3:
-                st.markdown(f"*{format_duration(row.duration_ms)}*")
+
+            # Prépare l'affichage en colonnes : image, infos chanson, durée
+            #track_url = f"https://open.spotify.com/track/{row.track_id}"
+            #image_url = get_album_image_url_cached(row.track_id)
+            #col1, col2, col3 = st.columns([1, 4, 1])
+
+            # Ajout du lecteur Spotify intégré
+            embed_url = f"https://open.spotify.com/embed/track/{row.track_id}"
+            num_columns = 4  # Nombre de lecteurs par ligne
+            rows = [filtered_df.iloc[i:i + num_columns] for i in range(0, len(filtered_df), num_columns)]
+
+            for row_tracks in rows:
+                cols = st.columns(num_columns)
+                for idx, track in enumerate(row_tracks.itertuples()):
+                    with cols[idx]:
+                        embed_url = f"https://open.spotify.com/embed/track/{track.track_id}"
+                        st.markdown(
+                            f"""
+                             <div style="display: flex; justify-content: center; padding: 10px;">
+                                 <iframe src="{embed_url}" width="320" height="100" frameborder="0" allowtransparency="true" allow="encrypted-media"></iframe>
+                            </div>
+                            """,
+                            unsafe_allow_html=True
+                )
+
+
+           # with col1:
+             #   if image_url:
+
+                    # Affiche la pochette de l'album
+               #     st.image(image_url, width=60)
+
+            #with col2:
+
+                # Affiche le titre (cliquable) et l’artiste
+             #   st.markdown(f"{i}. [**{row.track_name}**]({track_url}) – *{row.artist_name}*")
+           # with col3:
+            #    st.markdown(f"*{format_duration(row.duration_ms)}*")
 
         if st.button("Créer cette playlist dans mon compte Spotify"):
             try:
@@ -313,16 +543,21 @@ elif choice == "Activity-to-Playlist":
         st.metric("Durée totale", format_duration(total_duration_ms))
 
         for i, row in enumerate(filtered_df.itertuples(), 1):
-            track_url = f"https://open.spotify.com/track/{row.track_id}"
-            image_url = get_album_image_url_cached(row.track_id)
-            col1, col2, col3 = st.columns([1, 4, 1])
-            with col1:
-                if image_url:
-                    st.image(image_url, width=60)
-            with col2:
-                st.markdown(f"{i}. [**{row.track_name}**]({track_url}) – *{row.artist_name}*")
-            with col3:
-                st.markdown(f"*{format_duration(row.duration_ms)}*")
+            #track_url = f"https://open.spotify.com/track/{row.track_id}"
+            #image_url = get_album_image_url_cached(row.track_id)
+            #col1, col2, col3 = st.columns([1, 4, 1])
+
+            # Lecteur intégré Spotify
+            embed_url = f"https://open.spotify.com/embed/track/{row.track_id}"
+            st.components.v1.iframe(embed_url, width=300, height=80)
+
+            #with col1:
+             #   if image_url:
+              #      st.image(image_url, width=60)
+            #with col2:
+             #   st.markdown(f"{i}. [**{row.track_name}**]({track_url}) – *{row.artist_name}*")
+            #with col3:
+             #   st.markdown(f"*{format_duration(row.duration_ms)}*")
 
         if st.button("Créer cette playlist dans mon compte Spotify"):
             try:
@@ -406,7 +641,11 @@ elif choice == "Song-to-Song":
                     st.markdown(f"**Artiste :** {selected_track['artist_name']}")
                     st.markdown(f"**Durée :** {format_duration(selected_track['duration_ms'])}")
                     st.markdown(f"**Genre :** {selected_track['genre']}")
-                
+
+                     # Lecteur intégré Spotify pour la chanson sélectionnée
+                    embed_url = f"https://open.spotify.com/embed/track/{selected_track['track_id']}"
+                    st.components.v1.iframe(embed_url, width=300, height=80)
+
                 # Trouver une chanson similaire
                 if st.button("Trouver une chanson similaire"):
                     with st.spinner("Recherche d'une chanson similaire..."):
@@ -436,6 +675,11 @@ elif choice == "Song-to-Song":
                         st.markdown(f"**Durée :** {format_duration(similar_track['duration_ms'])}")
                         st.markdown(f"**Genre :** {similar_track['genre']}")
                     
+                    # Lecteur intégré Spotify pour la chanson recommandée
+                    embed_url = f"https://open.spotify.com/embed/track/{similar_track['track_id']}"
+                    
+                    st.components.v1.iframe(embed_url, width=300, height=80)
+
                     # Graphique de comparaison
                     if available_audio_cols:
                         st.markdown("---")
