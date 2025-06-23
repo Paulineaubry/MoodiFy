@@ -62,6 +62,7 @@ def load_custom_css():
     [data-testid="stSidebar"] .css-14xtw73::before {
         background-color: white !important;
     }
+                    
 
     /* Style for the selectbox dropdown */
     .stSelectbox > div > div {
@@ -357,6 +358,8 @@ def create_spotify_playlist(track_ids, playlist_name):
     sp_local.playlist_add_items(playlist_id=playlist["id"], items=track_uris)
     return playlist["external_urls"]["spotify"]
 
+
+
 # -------- Charge le dataset des chansons depuis le fichier CSV et le met en cache -------- #
 
 @st.cache_data
@@ -397,16 +400,22 @@ if not required_cols.issubset(df.columns):
 load_custom_css()
 
 # Configuration de la page Streamlit (titre, layout large, sidebar ouverte par défaut)
-st.set_page_config(page_title="Ecoute Cha !!!", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Spectral", layout="wide", initial_sidebar_state="expanded")
 
 # Interface principale de l'application
-st.title("Ecoute me Cha !!")
+st.title("Spectral")
 st.markdown("---")
+
+# Suivi du choix précédent
+previous_choice = st.session_state.get("previous_choice", None)
 
 # Menu de navigation dans la sidebar pour choisir entre les 3 fonctionnalités
 st.sidebar.markdown("## **Menu Musical**")
 choice = st.sidebar.radio("Navigation", ["Song-to-Song", "Mood-to-Playlist", "Activity-to-Playlist"], label_visibility="collapsed")
 
+# Si changement de vue, mettre à jour
+if previous_choice != choice:
+    st.session_state['previous_choice'] = choice
 
 # ----- Fonctionnalité playlist selon l'humeur ----- #
 
@@ -437,32 +446,29 @@ if choice == "Mood-to-Playlist":
                 time.sleep(1.5)
 
             # Filtre les chansons du genre et de l'humeur choisis, mélange aléatoirement et prend les 20 premières
-            filtered_df = df[(df['genre'] == selected_genre) & (df['tags_humeur'] == selected_humeur)].sample(frac=1).head(20)
+            filtered_df = df[(df['genre'] == selected_genre) & (df['tags_humeur'] == selected_humeur)].sample(frac=1).head(10)
 
             if filtered_df.empty:
                 # Message si aucune chanson ne correspond
                 st.warning("Aucune chanson trouvée pour cette humeur.")
-
-                # Supprime les anciennes playlists de la session si elles existent
-                if 'playlist_df' in st.session_state:
-                    del st.session_state['playlist_df']
-                    del st.session_state['playlist_title']
+                st.session_state.pop('mood_playlist_df', None)
+                st.session_state.pop('mood_playlist_title', None)
 
             # Stocke la playlist filtrée et son titre dans la session
             else:
-                st.session_state['playlist_df'] = filtered_df
-                st.session_state['playlist_title'] = f"Playlist {selected_humeur} - {selected_genre}"
+                st.session_state['mood_playlist_df'] = filtered_df
+                st.session_state['mood_playlist_title'] = f"Playlist {selected_humeur} - {selected_genre}"
+                st.session_state['playlist_title'] = st.session_state['mood_playlist_title']
 
 
-
-    if 'playlist_df' in st.session_state:
+    if 'mood_playlist_df' in st.session_state:
 
         # Calcule la durée totale de la playlist en millisecondes
-        filtered_df = st.session_state['playlist_df']
+        filtered_df = st.session_state['mood_playlist_df']
         total_duration_ms = filtered_df['duration_ms'].sum()
 
         # Affiche un message de succès avec le titre de la playlist
-        st.success(f"Playlist générée pour : **{st.session_state['playlist_title']}**")
+        st.success(f"Playlist générée pour : **{st.session_state['mood_playlist_title']}**")
 
         # Affiche des indicateurs : nombre de chansons et durée totale formatée
         st.metric("Nombre de titres", len(filtered_df))
@@ -487,13 +493,10 @@ if choice == "Mood-to-Playlist":
                         embed_url = f"https://open.spotify.com/embed/track/{track.track_id}"
                         st.markdown(
                             f"""
-                             <div style="display: flex; justify-content: center; padding: 10px;">
-                                 <iframe src="{embed_url}" width="320" height="100" frameborder="0" allowtransparency="true" allow="encrypted-media"></iframe>
-                            </div>
+                            <iframe style="border-radius:12px" src="{embed_url}" width="100%" height="152" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
                             """,
-                            unsafe_allow_html=True
-                )
-
+                            unsafe_allow_html=True 
+                        )
 
            # with col1:
              #   if image_url:
@@ -522,23 +525,47 @@ elif choice == "Activity-to-Playlist":
     selected_genre = st.selectbox("Choisissez un genre musical :", df['genre'].dropna().unique())
     selected_activity = st.selectbox("Choisissez une activité :", df[df['genre'] == selected_genre]['tags_activité'].dropna().unique())
 
+    # Choix de la durée souhaitée
+    duree_min = st.slider("Durée de la playlist (en minutes)", min_value=10, max_value=120, step=5)
+    duree_ms = duree_min * 60 * 1000  # conversion en millisecondes
+
     if st.button("Générer Playlist"):
         with st.spinner("Création en cours..."):
             time.sleep(1.5)
-        filtered_df = df[(df['genre'] == selected_genre) & (df['tags_activité'] == selected_activity)].sample(frac=1).head(20)
-        if filtered_df.empty:
-            st.warning("Aucune chanson trouvée pour cette activité.")
-            if 'playlist_df' in st.session_state:
-                del st.session_state['playlist_df']
-                del st.session_state['playlist_title']
-        else:
-            st.session_state['playlist_df'] = filtered_df
-            st.session_state['playlist_title'] = f"Playlist - {selected_activity}"
 
-    if 'playlist_df' in st.session_state:
-        filtered_df = st.session_state['playlist_df']
-        total_duration_ms = filtered_df['duration_ms'].sum()
-        st.success(f"Playlist générée pour : **{st.session_state['playlist_title']}**")
+           # On mélange les titres correspondant
+        candidats = df[
+            (df['genre'] == selected_genre) & 
+            (df['tags_activité'] == selected_activity)
+        ].sample(frac=1)
+
+        playlist = []
+        total = 0
+
+        # Sélectionne les titres jusqu'à atteindre la durée
+        for _, row in candidats.iterrows():
+            if total + row['duration_ms'] > duree_ms:
+                break
+            playlist.append(row)
+            total += row['duration_ms']
+
+        if not playlist:
+            st.warning("Aucune chanson trouvée pour cette durée et activité.")
+            st.session_state.pop('activity_playlist_df', None)
+            st.session_state.pop('activity_playlist_title', None)
+        else:
+            filtered_df = pd.DataFrame(playlist)
+            st.session_state['activity_playlist_df'] = filtered_df
+            st.session_state['activity_playlist_title'] = f"Playlist - {selected_activity}"
+
+
+        if 'activity_playlist_df' in st.session_state:
+            filtered_df = st.session_state['activity_playlist_df']
+            total_duration_ms = filtered_df['duration_ms'].sum()
+
+            st.success(f"Playlist générée pour : **{st.session_state['activity_playlist_title']}**")
+
+
         st.metric("Nombre de titres", len(filtered_df))
         st.metric("Durée totale", format_duration(total_duration_ms))
 
