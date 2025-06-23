@@ -411,7 +411,7 @@ previous_choice = st.session_state.get("previous_choice", None)
 
 # Menu de navigation dans la sidebar pour choisir entre les 3 fonctionnalités
 st.sidebar.markdown("## **Menu Musical**")
-choice = st.sidebar.radio("Navigation", ["Song-to-Song", "Mood-to-Playlist", "Activity-to-Playlist"], label_visibility="collapsed")
+choice = st.sidebar.radio("Navigation", ["Song-to-Song", "Mood-to-Playlist", "Activity-to-Playlist","Track-by-Audio-Preferences"], label_visibility="collapsed")
 
 # Si changement de vue, mettre à jour
 if previous_choice != choice:
@@ -746,6 +746,92 @@ elif choice == "Song-to-Song":
                 if key in st.session_state:
                     del st.session_state[key]
             st.rerun()
+
+# ----- Fonctionalité BONUS ------ #
+
+elif choice == "Track-by-Audio-Preferences":
+    st.header("Trouve une chanson selon tes préférences audio")
+
+    st.markdown("Ajuste les curseurs selon ce que tu recherches dans une chanson ")
+
+    features = ['danceability', 'energy', 'valence', 'acousticness', 
+                'instrumentalness', 'speechiness', 'liveness']
+
+    user_preferences = {}
+    for feature in features:
+        user_preferences[feature] = st.slider(
+            label=feature.capitalize(),
+            min_value=0.0,
+            max_value=1.0,
+            step=0.05,
+            value=0.5,
+        )
+
+    if st.button("Trouver une chanson qui correspond"):
+        with st.spinner("Analyse en cours..."):
+            time.sleep(1.5)
+
+        # Calcul de la distance euclidienne
+        df_filtered = df.dropna(subset=features)
+        distances = ((df_filtered[features] - pd.Series(user_preferences)) ** 2).sum(axis=1)
+        closest_index = distances.idxmin()
+        closest_track = df_filtered.loc[closest_index]
+
+        st.success("Voici la chanson qui correspond le plus à tes préférences :")
+
+        st.write(f"**{closest_track['track_name']}** — *{closest_track['artist_name']}*")
+
+        embed_url = f"https://open.spotify.com/embed/track/{closest_track['track_id']}"
+        st.markdown(
+            f"""
+            <iframe style="border-radius:12px" src="{embed_url}" width="100%" height="152" frameBorder="0" allowfullscreen=""
+            allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        st.subheader("Comparaison des caractéristiques audio ")
+
+        # Préparer les données pour le radar
+        fig = go.Figure()
+
+        # Tracé des préférences utilisateur
+        fig.add_trace(go.Scatterpolar(
+            r=[user_preferences[feat] for feat in features],
+            theta=[feat.capitalize() for feat in features],
+            fill='toself',
+            name='Préférences utilisateur',
+            line_color='deepskyblue'
+        ))
+
+        # Tracé du morceau sélectionné
+        fig.add_trace(go.Scatterpolar(
+            r=[closest_track[feat] for feat in features],
+            theta=[feat.capitalize() for feat in features],
+            fill='toself',
+            name='Chanson proposée',
+            line_color='gold'
+        ))
+
+        fig.update_layout(
+            polar=dict(
+                radialaxis=dict(visible=True, range=[0, 1])
+            ),
+            showlegend=True,
+            height=500
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
+
+        # Affichage des valeurs détaillées (facultatif)
+        with st.expander("Détails numériques "):
+            for feature in features  :
+                st.metric(
+                    label=feature.capitalize(),
+                    value=f"{closest_track[feature]:.2f}",
+                    delta=f"{closest_track[feature] - user_preferences[feature]:+.2f}"
+                )
+
 
 st.markdown("---")
 st.markdown('<div class="footer-style"><p>Créé par Pauline, Gaelle, Bertrand et Hassan</p></div>', unsafe_allow_html=True)
