@@ -514,7 +514,7 @@ elif choice == "Song-to-Song":
         available_audio_cols = [col for col in audio_features_cols if col in df_genre.columns]
         
         if not available_audio_cols:
-            st.info("ℹ️ Les caractéristiques audio ne sont pas disponibles dans le dataset. La sélection sera basée sur d'autres critères.")
+            st.info("Les caractéristiques audio ne sont pas disponibles dans le dataset. La sélection sera basée sur d'autres critères.")
         
         if st.button("Découvrir 5 chansons variées"):
             with st.spinner("Sélection de chansons variées..."):

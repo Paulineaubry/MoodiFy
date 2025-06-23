@@ -417,6 +417,8 @@ choice = st.sidebar.radio("Navigation", ["Song-to-Song", "Mood-to-Playlist", "Ac
 if previous_choice != choice:
     st.session_state['previous_choice'] = choice
 
+
+
 # ----- Fonctionnalité playlist selon l'humeur ----- #
 
 if choice == "Mood-to-Playlist":
@@ -431,12 +433,32 @@ if choice == "Mood-to-Playlist":
 
     if humeurs_list:
 
-        # Affiche un curseur pour sélectionner une humeur dans la liste
-        # Récupère l'humeur choisie selon la position du curseur
-        # Affiche l'humeur sélectionnée avec un style personnalisé
+        # Humeurs fixes avec couleurs et mapping
+        humeurs_dict = {
+            "Joie":      {"color": "#FFE28A", "tag_humeur": "#triste"},
+            "Tristesse": {"color": "#A9C8E2", "tag_humeur": "#calme"},
+            "Colère":    {"color": "#F59B9B", "tag_humeur": "#energique"},
+            "Dégoût":    {"color": "#B5E3A1", "tag_humeur": "#joyeux"},
+            "Angoisse":  {"color": "#CBA9E5", "tag_humeur": "#calme"}
+        }
 
-        mood_index = st.slider("Faites glisser pour choisir votre humeur", 0, len(humeurs_list)-1, len(humeurs_list)//2)
-        selected_humeur = humeurs_list[mood_index]
+        # Boutons bulles
+        selected_humeur = st.radio(
+            "Comment vous sentez-vous aujourd’hui ?",
+            list(humeurs_dict.keys()),
+            horizontal=True,
+        )
+
+        # Jauge colorée stylisée
+        if selected_humeur:
+            color = humeurs_dict[selected_humeur]["color"]
+            st.markdown(f"""
+            <div style='background-color:{color}; padding: 1em; text-align: center; border-radius: 12px; font-size: 1.3em; font-weight: bold;'>
+                {selected_humeur}
+            </div>
+            """, unsafe_allow_html=True)
+
+
         st.markdown(f"<div class='mood-display'>{selected_humeur}</div>", unsafe_allow_html=True)
 
         if st.button("Générer Playlist"):
@@ -446,7 +468,8 @@ if choice == "Mood-to-Playlist":
                 time.sleep(1.5)
 
             # Filtre les chansons du genre et de l'humeur choisis, mélange aléatoirement et prend les 20 premières
-            filtered_df = df[(df['genre'] == selected_genre) & (df['tags_humeur'] == selected_humeur)].sample(frac=1).head(10)
+            tag_humeur = humeurs_dict[selected_humeur]["tag_humeur"]
+            filtered_df = df[(df['genre'] == selected_genre) & (df['tags_humeur'] == tag_humeur)].sample(frac=1).head(10)
 
             if filtered_df.empty:
                 # Message si aucune chanson ne correspond
@@ -474,22 +497,16 @@ if choice == "Mood-to-Playlist":
         st.metric("Nombre de titres", len(filtered_df))
         st.metric("Durée totale", format_duration(total_duration_ms))
 
-        for i, row in enumerate(filtered_df.itertuples(), 1):
-
-            # Prépare l'affichage en colonnes : image, infos chanson, durée
-            #track_url = f"https://open.spotify.com/track/{row.track_id}"
-            #image_url = get_album_image_url_cached(row.track_id)
-            #col1, col2, col3 = st.columns([1, 4, 1])
-
-            # Ajout du lecteur Spotify intégré
-            embed_url = f"https://open.spotify.com/embed/track/{row.track_id}"
-            num_columns = 4  # Nombre de lecteurs par ligne
-            rows = [filtered_df.iloc[i:i + num_columns] for i in range(0, len(filtered_df), num_columns)]
-
-            for row_tracks in rows:
-                cols = st.columns(num_columns)
-                for idx, track in enumerate(row_tracks.itertuples()):
-                    with cols[idx]:
+        # CORRECTION : Affichage en grille des lecteurs Spotify
+        num_columns = 2  # Réduit à 2 colonnes pour un meilleur affichage
+        tracks_list = list(filtered_df.itertuples())
+        
+        for i in range(0, len(tracks_list), num_columns):
+            cols = st.columns(num_columns)
+            for j in range(num_columns):
+                if i + j < len(tracks_list):
+                    track = tracks_list[i + j]
+                    with cols[j]:
                         embed_url = f"https://open.spotify.com/embed/track/{track.track_id}"
                         st.markdown(
                             f"""
@@ -497,19 +514,7 @@ if choice == "Mood-to-Playlist":
                             """,
                             unsafe_allow_html=True 
                         )
-
-           # with col1:
-             #   if image_url:
-
-                    # Affiche la pochette de l'album
-               #     st.image(image_url, width=60)
-
-            #with col2:
-
-                # Affiche le titre (cliquable) et l’artiste
-             #   st.markdown(f"{i}. [**{row.track_name}**]({track_url}) – *{row.artist_name}*")
-           # with col3:
-            #    st.markdown(f"*{format_duration(row.duration_ms)}*")
+    
 
         if st.button("Créer cette playlist dans mon compte Spotify"):
             try:
@@ -519,30 +524,52 @@ if choice == "Mood-to-Playlist":
             except Exception as e:
                 st.error(f"Erreur lors de la création de la playlist : {e}")
 
-# Fonctionnalité playlist selon l'activité
+
 elif choice == "Activity-to-Playlist":
     st.header("Playlist selon l'activité choisie")
+
     selected_genre = st.selectbox("Choisissez un genre musical :", df['genre'].dropna().unique())
-    selected_activity = st.selectbox("Choisissez une activité :", df[df['genre'] == selected_genre]['tags_activité'].dropna().unique())
+
+    # Mapping des activités fixes
+    activities_dict = {
+        "Sport ":      {"color": "#F9C74F", "tag_activité": "#sport/#cardio"},
+        "Travail ":     {"color": "#90BE6D", "tag_activité": "#concentration/#travail"},
+        "Fête ":        {"color": "#F9844A", "tag_activité": "#dance/#fête"},
+        "Détente ":     {"color": "#BDB2FF", "tag_activité": "#meditation/#yoga"},
+    }
+
+    selected_activity = st.radio(
+        "Quelle est votre activité actuelle ?",
+        list(activities_dict.keys()),
+        horizontal=True,
+    )
+
+    if selected_activity:
+        color = activities_dict[selected_activity]["color"]
+        st.markdown(f"""
+        <div style='background-color:{color}; padding: 1em; text-align: center; border-radius: 12px; font-size: 1.3em; font-weight: bold;'>
+            {selected_activity}
+        </div>
+        """, unsafe_allow_html=True)
 
     # Choix de la durée souhaitée
     duree_min = st.slider("Durée de la playlist (en minutes)", min_value=10, max_value=120, step=5)
-    duree_ms = duree_min * 60 * 1000  # conversion en millisecondes
+    duree_ms = duree_min * 60 * 1000  # en millisecondes
 
     if st.button("Générer Playlist"):
         with st.spinner("Création en cours..."):
             time.sleep(1.5)
 
-           # On mélange les titres correspondant
+        tag_activite = activities_dict[selected_activity]["tag_activité"]
+
         candidats = df[
             (df['genre'] == selected_genre) & 
-            (df['tags_activité'] == selected_activity)
+            (df['tags_activité'] == tag_activite)
         ].sample(frac=1)
 
         playlist = []
         total = 0
 
-        # Sélectionne les titres jusqu'à atteindre la durée
         for _, row in candidats.iterrows():
             if total + row['duration_ms'] > duree_ms:
                 break
@@ -556,35 +583,35 @@ elif choice == "Activity-to-Playlist":
         else:
             filtered_df = pd.DataFrame(playlist)
             st.session_state['activity_playlist_df'] = filtered_df
-            st.session_state['activity_playlist_title'] = f"Playlist - {selected_activity}"
+            st.session_state['activity_playlist_title'] = f"Playlist {selected_activity} - {selected_genre}"
+            st.session_state['playlist_title'] = st.session_state['activity_playlist_title']
 
+    # Affichage des résultats
+    if 'activity_playlist_df' in st.session_state:
+        filtered_df = st.session_state['activity_playlist_df']
+        total_duration_ms = filtered_df['duration_ms'].sum()
 
-        if 'activity_playlist_df' in st.session_state:
-            filtered_df = st.session_state['activity_playlist_df']
-            total_duration_ms = filtered_df['duration_ms'].sum()
-
-            st.success(f"Playlist générée pour : **{st.session_state['activity_playlist_title']}**")
-
-
+        st.success(f"Playlist générée pour : **{st.session_state['activity_playlist_title']}**")
         st.metric("Nombre de titres", len(filtered_df))
         st.metric("Durée totale", format_duration(total_duration_ms))
 
-        for i, row in enumerate(filtered_df.itertuples(), 1):
-            #track_url = f"https://open.spotify.com/track/{row.track_id}"
-            #image_url = get_album_image_url_cached(row.track_id)
-            #col1, col2, col3 = st.columns([1, 4, 1])
+        # Grille 2 colonnes comme pour humeur
+        num_columns = 2
+        tracks_list = list(filtered_df.itertuples())
 
-            # Lecteur intégré Spotify
-            embed_url = f"https://open.spotify.com/embed/track/{row.track_id}"
-            st.components.v1.iframe(embed_url, width=300, height=80)
-
-            #with col1:
-             #   if image_url:
-              #      st.image(image_url, width=60)
-            #with col2:
-             #   st.markdown(f"{i}. [**{row.track_name}**]({track_url}) – *{row.artist_name}*")
-            #with col3:
-             #   st.markdown(f"*{format_duration(row.duration_ms)}*")
+        for i in range(0, len(tracks_list), num_columns):
+            cols = st.columns(num_columns)
+            for j in range(num_columns):
+                if i + j < len(tracks_list):
+                    track = tracks_list[i + j]
+                    with cols[j]:
+                        embed_url = f"https://open.spotify.com/embed/track/{track.track_id}"
+                        st.markdown(
+                            f"""
+                            <iframe style="border-radius:12px" src="{embed_url}" width="100%" height="152" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
+                            """,
+                            unsafe_allow_html=True
+                        )
 
         if st.button("Créer cette playlist dans mon compte Spotify"):
             try:
@@ -593,6 +620,7 @@ elif choice == "Activity-to-Playlist":
                 st.markdown(f"[Voir la playlist sur Spotify]({playlist_url})")
             except Exception as e:
                 st.error(f"Erreur lors de la création de la playlist : {e}")
+
 
 # Fonctionnalité chanson pour chanson
 elif choice == "Song-to-Song":
@@ -655,23 +683,15 @@ elif choice == "Song-to-Song":
                 
                 st.markdown("---")
                 st.subheader("Chanson sélectionnée :")
-                
-                col1, col2 = st.columns([1, 3])
-                with col1:
-                    image_url = get_album_image_url_cached(selected_track['track_id'])
-                    if image_url:
-                        st.image(image_url, width=150)
-                
-                with col2:
-                    track_url = f"https://open.spotify.com/track/{selected_track['track_id']}"
-                    st.markdown(f"### [{selected_track['track_name']}]({track_url})")
-                    st.markdown(f"**Artiste :** {selected_track['artist_name']}")
-                    st.markdown(f"**Durée :** {format_duration(selected_track['duration_ms'])}")
-                    st.markdown(f"**Genre :** {selected_track['genre']}")
 
-                     # Lecteur intégré Spotify pour la chanson sélectionnée
-                    embed_url = f"https://open.spotify.com/embed/track/{selected_track['track_id']}"
-                    st.components.v1.iframe(embed_url, width=300, height=80)
+                # Lecteur Spotify intégré
+                embed_url = f"https://open.spotify.com/embed/track/{selected_track['track_id']}"
+                st.markdown(
+                    f"""
+                    <iframe style="border-radius:12px" src="{embed_url}" width="100%" height="152" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
+                    """,
+                    unsafe_allow_html=True 
+                    )
 
                 # Trouver une chanson similaire
                 if st.button("Trouver une chanson similaire"):
@@ -679,34 +699,25 @@ elif choice == "Song-to-Song":
                         similar_track = find_similar_track(selected_track, df_genre, available_audio_cols)
                         if similar_track is not None:
                             st.session_state['similar_track'] = similar_track
+                            st.rerun()
                         else:
                             st.error("Aucune chanson similaire trouvée.")
                 
-                # Afficher la chanson similaire si elle existe
                 if 'similar_track' in st.session_state:
                     similar_track = st.session_state['similar_track']
                     
                     st.markdown("---")
                     st.subheader("Chanson recommandée :")
-                    
-                    col1, col2 = st.columns([1, 3])
-                    with col1:
-                        similar_image_url = get_album_image_url_cached(similar_track['track_id'])
-                        if similar_image_url:
-                            st.image(similar_image_url, width=150)
-                    
-                    with col2:
-                        similar_track_url = f"https://open.spotify.com/track/{similar_track['track_id']}"
-                        st.markdown(f"### [{similar_track['track_name']}]({similar_track_url})")
-                        st.markdown(f"**Artiste :** {similar_track['artist_name']}")
-                        st.markdown(f"**Durée :** {format_duration(similar_track['duration_ms'])}")
-                        st.markdown(f"**Genre :** {similar_track['genre']}")
-                    
+
+   
                     # Lecteur intégré Spotify pour la chanson recommandée
                     embed_url = f"https://open.spotify.com/embed/track/{similar_track['track_id']}"
-                    
-                    st.components.v1.iframe(embed_url, width=300, height=80)
-
+                    st.markdown(
+                        f"""
+                        <iframe style="border-radius:12px" src="{embed_url}" width="100%" height="152" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
+                        """,
+                        unsafe_allow_html=True 
+                    )
                     # Graphique de comparaison
                     if available_audio_cols:
                         st.markdown("---")
