@@ -752,7 +752,7 @@ elif choice == "Song-to-Song":
 elif choice == "Track-by-Audio-Preferences":
     st.header("Trouve une chanson selon tes préférences audio")
 
-    st.markdown("Ajuste les curseurs selon ce que tu recherches dans une chanson ")
+    st.markdown("**Ajuste les curseurs selon ce que tu recherches dans une chanson** ")
 
     features = ['danceability', 'energy', 'valence', 'acousticness', 
                 'instrumentalness', 'speechiness', 'liveness']
