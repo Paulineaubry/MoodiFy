@@ -9,6 +9,9 @@ import plotly.graph_objects as go
 import plotly.express as px
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
+import streamlit.components.v1 as components
+from streamlit_js_eval import streamlit_js_eval
+
 
 
 
@@ -435,11 +438,11 @@ if choice == "Mood-to-Playlist":
 
         # Humeurs fixes avec couleurs et mapping
         humeurs_dict = {
-            "Joie":      {"color": "#FFE28A", "tag_humeur": "#triste"},
-            "Tristesse": {"color": "#A9C8E2", "tag_humeur": "#calme"},
-            "Colère":    {"color": "#F59B9B", "tag_humeur": "#energique"},
-            "Dégoût":    {"color": "#B5E3A1", "tag_humeur": "#joyeux"},
-            "Angoisse":  {"color": "#CBA9E5", "tag_humeur": "#calme"}
+            "Joyeux":      {"color": "#F9C74F", "tag_humeur": "#joyeux"},
+            "Triste":      {"color": "#A9C8E2", "tag_humeur": "#triste"},
+            "En colère":   {"color": "#F9844A", "tag_humeur": "#energique"},
+            "Dégoûté":     {"color": "#90BE6D", "tag_humeur": "#calme"},
+            "Angoissé":    {"color": "#BDB2FF", "tag_humeur": "#calme"}
         }
 
         # Boutons bulles
@@ -452,14 +455,29 @@ if choice == "Mood-to-Playlist":
         # Jauge colorée stylisée
         if selected_humeur:
             color = humeurs_dict[selected_humeur]["color"]
+
+            # Messages conditionnels liés aux humeurs
+            humeur_messages = {
+                "Joyeux": "Gardez cette humeur !",
+                "Triste": "Allez-y, lâchez tout !",
+                "En colère": "Défoulez-vous !",
+                "Dégoûté": "Laissez couler.",
+                "Angoissé": "Respirez."
+            }
+
+            message = humeur_messages.get(selected_humeur, "")
+
             st.markdown(f"""
             <div style='background-color:{color}; padding: 1em; text-align: center; border-radius: 12px; font-size: 1.3em; font-weight: bold;'>
-                {selected_humeur}
+                {selected_humeur.upper()} : <i>{message}</i>
             </div>
             """, unsafe_allow_html=True)
 
 
-        st.markdown(f"<div class='mood-display'>{selected_humeur}</div>", unsafe_allow_html=True)
+            st.markdown("")
+ 
+
+
 
         if st.button("Générer Playlist"):
 
@@ -525,6 +543,7 @@ if choice == "Mood-to-Playlist":
                 st.error(f"Erreur lors de la création de la playlist : {e}")
 
 
+# ----- Fonctionalité playlist selon activité ----- #
 elif choice == "Activity-to-Playlist":
     st.header("Playlist selon l'activité choisie")
 
@@ -532,7 +551,7 @@ elif choice == "Activity-to-Playlist":
 
     # Mapping des activités fixes
     activities_dict = {
-        "Sport ":      {"color": "#F9C74F", "tag_activité": "#sport/#cardio"},
+        "Sport ":       {"color": "#F9C74F", "tag_activité": "#sport/#cardio"},
         "Travail ":     {"color": "#90BE6D", "tag_activité": "#concentration/#travail"},
         "Fête ":        {"color": "#F9844A", "tag_activité": "#dance/#fête"},
         "Détente ":     {"color": "#BDB2FF", "tag_activité": "#meditation/#yoga"},
@@ -552,8 +571,47 @@ elif choice == "Activity-to-Playlist":
         </div>
         """, unsafe_allow_html=True)
 
-    # Choix de la durée souhaitée
-    duree_min = st.slider("Durée de la playlist (en minutes)", min_value=10, max_value=120, step=5)
+    # Slider noir personnalisé uniquement
+    html_slider_duree = """
+    <div style="margin: 20px 0;">
+        <label for="slider_duree" style="font-size: 14px; font-weight: bold; color: #262730;">
+            Durée de la playlist (en minutes): <span id="value_duree">60</span>
+        </label>
+        <input
+            id="slider_duree"
+            type="range"
+            min="20"
+            max="180"
+            value="60"
+            step="5"
+            style="width: 100%; height: 8px; accent-color: black; margin-top: 10px;"
+            oninput="
+                document.getElementById('value_duree').innerText = this.value;
+                window.parent.postMessage({feature: 'duree_min', value: parseInt(this.value)}, '*');
+            "
+        >
+    </div>
+    <script>
+        // Initialiser la valeur dans le session state de Streamlit
+        window.parent.postMessage({feature: 'duree_min', value: 60}, '*');
+        
+        window.addEventListener('message', (event) => {
+            if (event.data.feature === 'duree_min') {
+                document.getElementById('slider_duree').value = event.data.value;
+                document.getElementById('value_duree').innerText = event.data.value;
+            }
+        });
+    </script>
+    """
+
+    components.html(html_slider_duree, height=100)
+
+    # Récupération de la valeur du slider personnalisé
+    # Utilisation de session_state pour stocker la valeur
+    if 'duree_min' not in st.session_state:
+        st.session_state.duree_min = 60
+    
+    duree_min = st.session_state.duree_min
     duree_ms = duree_min * 60 * 1000  # en millisecondes
 
     if st.button("Générer Playlist"):
@@ -595,7 +653,7 @@ elif choice == "Activity-to-Playlist":
         st.metric("Nombre de titres", len(filtered_df))
         st.metric("Durée totale", format_duration(total_duration_ms))
 
-        # Grille 2 colonnes comme pour humeur
+        # Grille 2 
         num_columns = 2
         tracks_list = list(filtered_df.itertuples())
 
@@ -621,8 +679,7 @@ elif choice == "Activity-to-Playlist":
             except Exception as e:
                 st.error(f"Erreur lors de la création de la playlist : {e}")
 
-
-# Fonctionnalité chanson pour chanson
+#----- Fonctionnalité chanson pour chanson-----#
 elif choice == "Song-to-Song":
     st.header("Découverte musicale : d'une chanson à l'autre")
     
@@ -755,17 +812,39 @@ elif choice == "Track-by-Audio-Preferences":
     st.markdown("**Ajuste les curseurs selon ce que tu recherches dans une chanson** ")
 
     features = ['danceability', 'energy', 'valence', 'acousticness', 
-                'instrumentalness', 'speechiness', 'liveness']
+            'instrumentalness', 'speechiness', 'liveness']
 
     user_preferences = {}
+
     for feature in features:
-        user_preferences[feature] = st.slider(
-            label=feature.capitalize(),
-            min_value=0.0,
-            max_value=1.0,
-            step=0.05,
-            value=0.5,
-        )
+        # Génère un slider HTML avec accent-color
+        html_slider = f"""
+        <label for="slider_{feature}">{feature.capitalize()}: <span id="value_{feature}">0.50</span></label>
+        <input
+            id="slider_{feature}"
+            type="range"
+            min="0"
+            max="100"
+            value="50"
+            step="5"
+            style="width: 100%; accent-color: black;"
+            oninput="
+                document.getElementById('value_{feature}').innerText = (this.value / 100).toFixed(2);
+                window.parent.postMessage({{feature: '{feature}', value: this.value / 100}}, '*');
+            "
+        >
+        <script>
+            window.addEventListener('message', (event) => {{
+                if (event.data.feature === '{feature}') {{
+                    document.getElementById('slider_{feature}').value = event.data.value * 100;
+                    document.getElementById('value_{feature}').innerText = event.data.value.toFixed(2);
+                }}
+            }});
+        </script>
+        <hr/>
+        """
+        # Insert HTML
+        components.html(html_slider, height=80)
 
     if st.button("Trouver une chanson qui correspond"):
         with st.spinner("Analyse en cours..."):
