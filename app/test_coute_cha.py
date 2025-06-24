@@ -1,17 +1,22 @@
 import streamlit as st
+import streamlit.components.v1 as components
+from streamlit_js_eval import streamlit_js_eval
+
 import pandas as pd
 import time
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 from dotenv import load_dotenv
 import os
+
+import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
-from sklearn.metrics.pairwise import cosine_similarity
-import numpy as np
-import streamlit.components.v1 as components
-from streamlit_js_eval import streamlit_js_eval
 
+from sklearn.metrics.pairwise import cosine_similarity, euclidean_distances
+from sklearn.preprocessing import StandardScaler
+
+import pickle
 
 
 
@@ -164,7 +169,440 @@ def load_custom_css():
 
 
 
+class MoodifyRecommender:
+    def __init__(self, model_path, data_path):
+        self.model_info = self.charger_modele(model_path)
 
+        if self.model_info is None:
+            raise ValueError("Impossible de charger le modèle ML")
+
+        # Si c'est un dict, on extrait le modèle et les infos
+        if isinstance(self.model_info, dict):
+            self.model = self.model_info.get('model', None)
+            self.cluster_profiles = self.model_info.get('cluster_profiles', {})
+        else:
+            self.model = self.model_info
+            self.cluster_profiles = {}
+
+        self.features = ['danceability', 'energy', 'valence', 'tempo']
+
+        self.df_songs = pd.read_csv(data_path)
+        self.songs_processed = None
+        self.songs_scaled = None
+        self.clusters_assigned = None
+
+        if self.model:
+            self.preparer_donnees()
+        else:
+            raise ValueError("Modèle sklearn introuvable")
+
+    def charger_modele(self, model_path):
+        try:
+            print(f"[DEBUG] Tentative de chargement du modèle depuis : {model_path}")
+            with open(model_path, 'rb') as f:
+                model = pickle.load(f)
+            print(f"[DEBUG] Modèle chargé : {type(model)}")
+            return model
+        except Exception as e:
+            print(f"[ERREUR] Erreur lors du chargement du modèle: {e}")
+            return None
+
+    def preparer_donnees(self):
+        self.songs_processed = self.df_songs[self.features].dropna()
+        # Scaling des données pour les distances et similarités
+        scaler = StandardScaler()
+        self.songs_scaled = scaler.fit_transform(self.songs_processed)
+
+        # Affectation des clusters (fit_predict de DBSCAN)
+        self.clusters_assigned = self.model.fit_predict(self.songs_processed)
+
+        self.df_songs_with_clusters = self.df_songs.loc[self.songs_processed.index].copy()
+        self.df_songs_with_clusters['cluster'] = self.clusters_assigned
+
+    def get_song_profile(self, song_index):
+        if song_index not in self.df_songs_with_clusters.index:
+            return {}
+        song_data = self.df_songs_with_clusters.loc[song_index]
+        song_cluster = song_data['cluster']
+        cluster_profile = self.cluster_profiles.get(song_cluster, {})
+        song_features = {feature: song_data.get(feature, 0) for feature in self.features}
+        return {
+            'song_info': song_data.to_dict(),
+            'cluster': song_cluster,
+            'cluster_profile': cluster_profile,
+            'features': song_features
+        }
+    def recommander_songs_similaires(self, song_index, n_recommendations=5, method='cluster_cosine'):
+        """
+        Recommande des chansons similaires à une chanson donnée.
+        
+        Args:
+            song_index: index de la chanson dans df_songs (index du DataFrame original)
+            n_recommendations: nombre de recommandations
+            method: 'cluster_cosine', 'cluster_euclidean' ou 'global_cosine'
+            
+        Returns:
+            DataFrame avec les chansons similaires et leur score
+        """
+        if self.songs_scaled is None or self.clusters_assigned is None:
+            raise ValueError("Les données n'ont pas été préparées avec preparer_donnees()")
+            
+        if song_index not in self.df_songs_with_clusters.index:
+            print(f"La chanson {song_index} n'existe pas dans le jeu de données traité.")
+            return pd.DataFrame()
+        
+        # Position dans le tableau numpy
+        pos = list(self.songs_processed.index).index(song_index)
+        target_vector = self.songs_scaled[pos].reshape(1, -1)
+        
+        if method.startswith('cluster'):
+            cluster_id = self.df_songs_with_clusters.loc[song_index, 'cluster']
+            cluster_indices = self.df_songs_with_clusters[self.df_songs_with_clusters['cluster'] == cluster_id].index
+            cluster_pos = [list(self.songs_processed.index).index(i) for i in cluster_indices if i != song_index]
+            
+            if not cluster_pos:
+                print("Pas d'autres chansons dans le cluster.")
+                return pd.DataFrame()
+            
+            cluster_vectors = self.songs_scaled[cluster_pos]
+            
+            if method == 'cluster_cosine':
+                similarities = cosine_similarity(target_vector, cluster_vectors)[0]
+                indices_sorted = np.argsort(-similarities)
+                scores = similarities[indices_sorted]
+            elif method == 'cluster_euclidean':
+                distances = euclidean_distances(target_vector, cluster_vectors)[0]
+                indices_sorted = np.argsort(distances)
+                scores = 1 / (1 + distances[indices_sorted])  # conversion en score simple
+            else:
+                print(f"Méthode inconnue: {method}")
+                return pd.DataFrame()
+            
+            selected_pos = np.array(cluster_pos)[indices_sorted[:n_recommendations]]
+            
+        elif method == 'global_cosine':
+            similarities = cosine_similarity(target_vector, self.songs_scaled)[0]
+            similarities[pos] = -1  # exclure la chanson elle-même
+            indices_sorted = np.argsort(-similarities)
+            scores = similarities[indices_sorted]
+            selected_pos = indices_sorted[:n_recommendations]
+            
+        else:
+            print(f"Méthode inconnue: {method}")
+            return pd.DataFrame()
+        
+        indices_selected = [self.songs_processed.index[i] for i in selected_pos]
+        df_result = self.df_songs_with_clusters.loc[indices_selected].copy()
+        df_result['similarity_score'] = scores[:len(df_result)]
+        
+        return df_result.reset_index()
+
+
+# -------- FONCTION ADAPTÉE POUR SÉLECTIONNER DES TRACKS DIVERSES AVEC ML -------- #
+
+def select_diverse_tracks_ml(recommender, genre, n_tracks=5):
+    """
+    Sélectionne des tracks diverses en utilisant le clustering ML
+    """
+    # Filtrer par genre dans le dataset du recommender
+    df_genre = recommender.df_songs_with_clusters[
+        recommender.df_songs_with_clusters['genre'] == genre
+    ].copy()
+    
+    if df_genre.empty:
+        return pd.DataFrame()
+    
+    # Sélectionner des tracks de différents clusters
+    clusters = df_genre['cluster'].unique()
+    diverse_tracks = []
+    
+    # Prendre au moins une track de chaque cluster
+    for cluster in clusters[:n_tracks]:
+        cluster_tracks = df_genre[df_genre['cluster'] == cluster]
+        if not cluster_tracks.empty:
+            # Prendre une track aléatoire du cluster
+            selected_track = cluster_tracks.sample(n=1)
+            diverse_tracks.append(selected_track)
+    
+    # Si on n'a pas assez de tracks, compléter avec des sélections aléatoires
+    while len(diverse_tracks) < n_tracks and len(diverse_tracks) < len(df_genre):
+        remaining_tracks = df_genre.drop([t.index[0] for t in diverse_tracks])
+        if not remaining_tracks.empty:
+            diverse_tracks.append(remaining_tracks.sample(n=1))
+        else:
+            break
+    
+    if diverse_tracks:
+        return pd.concat(diverse_tracks)
+    else:
+        return pd.DataFrame()
+
+
+# -------- FONCTION ADAPTÉE POUR CRÉER LE GRAPHIQUE DE COMPARAISON AVEC ML -------- #
+
+def create_ml_comparison_chart(selected_track, similar_track, recommender):
+    """
+    Crée un graphique de comparaison basé sur les features ML
+    """
+    if not recommender.features:
+        return None
+    
+    # Préparer les données
+    features = recommender.features
+    track1_values = [selected_track.get(feat, 0) for feat in features]
+    track2_values = [similar_track.get(feat, 0) for feat in features]
+    
+    # Créer le graphique radar
+    fig = go.Figure()
+    
+    fig.add_trace(go.Scatterpolar(
+        r=track1_values,
+        theta=features,
+        fill='toself',
+        name=f"{selected_track['track_name'][:20]}...",
+        line_color='rgb(31, 119, 180)',
+        fillcolor='rgba(31, 119, 180, 0.2)'
+    ))
+    
+    fig.add_trace(go.Scatterpolar(
+        r=track2_values,
+        theta=features,
+        fill='toself',
+        name=f"{similar_track['track_name'][:20]}...",
+        line_color='rgb(255, 127, 14)',
+        fillcolor='rgba(255, 127, 14, 0.2)'
+    ))
+    
+    fig.update_layout(
+        polar=dict(
+            radialaxis=dict(
+                visible=True,
+                range=[0, 1]
+            )),
+        showlegend=True,
+        title="Comparaison des caractéristiques audio (ML)",
+        height=400
+    )
+    
+    return fig
+
+
+# -------- SECTION SONG-TO-SONG ADAPTÉE AVEC ML -------- #
+
+def song_to_song_ml_section():
+    """
+    Section Song-to-Song utilisant le système de recommandation ML
+    """
+    st.header("Découverte musicale intelligente : d'une chanson à l'autre")
+    st.markdown("*Basée sur votre modèle de clustering ML entraîné*")
+    
+    # Initialisation du recommandeur
+    if 'recommender' not in st.session_state:
+        try:
+            # MODIFIEZ CES CHEMINS SELON VOS FICHIERS
+            model_path = os.path.join(os.path.dirname(__file__), 'meilleur_modele.pkl')
+            data_path = os.path.join(os.path.dirname(__file__), '../data/df_final.csv')
+
+            
+            with st.spinner("Chargement du modèle ML..."):
+                st.session_state.recommender = MoodifyRecommender(model_path, data_path)
+            
+            if st.session_state.recommender.model_info is None:
+                st.error("Impossible de charger le modèle ML")
+                return
+            else:
+                st.success("Modèle ML chargé avec succès!")
+                
+        except Exception as e:
+            st.error(f"Erreur d'initialisation: {e}")
+            st.info("Vérifiez que les chemins vers votre modèle et vos données sont corrects.")
+            return
+    
+
+    recommender = st.session_state.recommender
+    recommender.preparer_donnees()
+
+    # Sélection du genre
+    available_genres = recommender.df_songs_with_clusters['genre'].dropna().unique()
+    selected_genre = st.selectbox("Choisissez votre genre de prédilection :", available_genres)
+    
+    # Filtrer le dataset par genre
+    genre_count = len(recommender.df_songs_with_clusters[
+        recommender.df_songs_with_clusters['genre'] == selected_genre
+    ])
+    
+    if genre_count == 0:
+        st.warning("Aucune chanson trouvée pour ce genre.")
+        return
+    
+    st.write(f"**{genre_count} chansons disponibles dans le genre {selected_genre}**")
+    st.info(f"Modèle utilise {len(recommender.features)} caractéristiques audio : {', '.join(recommender.features)}")
+    
+    # Méthode de recommandation
+    recommendation_method = st.selectbox(
+        "Méthode de recommandation :",
+        options=['cluster_cosine', 'cluster_euclidean', 'global_cosine'],
+        format_func=lambda x: {
+            'cluster_cosine': 'Cluster + Similarité Cosinus (Recommandé)',
+            'cluster_euclidean': 'Cluster + Distance Euclidienne',
+            'global_cosine': 'Global Cosinus'
+        }[x]
+    )
+    
+    # Sélectionner 5 tracks diverses
+    if st.button("Découvrir 5 chansons variées (ML)"):
+        with st.spinner("Sélection intelligente en cours..."):
+            diverse_tracks = select_diverse_tracks_ml(recommender, selected_genre, 5)
+            if not diverse_tracks.empty:
+                st.session_state['diverse_tracks_ml'] = diverse_tracks
+                st.session_state['recommendation_method'] = recommendation_method
+                st.success(f" {len(diverse_tracks)} chansons sélectionnées de différents clusters!")
+            else:
+                st.error("Aucune chanson trouvée pour ce genre.")
+    
+    # Afficher les 5 tracks si elles existent
+    if 'diverse_tracks_ml' in st.session_state:
+        st.subheader("Choisissez une chanson parmi ces options variées :")
+        
+        diverse_tracks = st.session_state['diverse_tracks_ml']
+        
+        # Afficher les informations sur les clusters
+        clusters_info = diverse_tracks['cluster'].value_counts()
+        st.write(f"**Répartition par cluster :** {dict(clusters_info)}")
+        
+        # Créer les colonnes pour l'affichage
+        cols = st.columns(min(5, len(diverse_tracks)))
+        
+        for idx, (track_idx, track) in enumerate(diverse_tracks.iterrows()):
+            if idx < len(cols):
+                with cols[idx]:
+                    # Image de l'album
+                    image_url = get_album_image_url_cached(track['track_id'])
+                    if image_url:
+                        st.image(image_url, width=120)
+                    
+                    # Informations de la track
+                    st.write(f"**{track['track_name'][:20]}{'...' if len(track['track_name']) > 20 else ''}**")
+                    st.write(f"*{track['artist_name'][:15]}{'...' if len(track['artist_name']) > 15 else ''}*")
+                    st.write(f"Cluster: {track['cluster']}")
+                    
+                    # Bouton de sélection
+                    if st.button(f"Choisir", key=f"select_ml_{track_idx}"):
+                        st.session_state['selected_track_ml'] = track
+                        st.session_state['selected_track_index'] = track_idx
+        
+        # Si une track est sélectionnée
+        if 'selected_track_ml' in st.session_state:
+            selected_track = st.session_state['selected_track_ml']
+            selected_index = st.session_state['selected_track_index']
+            
+            st.markdown("---")
+            st.subheader("Chanson sélectionnée :")
+            
+            # Afficher le profil de la chanson
+            song_profile = recommender.get_song_profile(selected_index)
+            if song_profile:
+                col1, col2 = st.columns([2, 1])
+                with col1:
+                    # Lecteur Spotify intégré
+                    embed_url = f"https://open.spotify.com/embed/track/{selected_track['track_id']}"
+                    st.markdown(
+                        f"""
+                        <iframe style="border-radius:12px" src="{embed_url}" width="100%" height="152" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
+                        """,
+                        unsafe_allow_html=True 
+                    )
+                
+                with col2:
+                    st.metric("Cluster", song_profile['cluster'])
+                    if 'cluster_profile' in song_profile and song_profile['cluster_profile']:
+                        st.write("**Profil du cluster :**")
+                        for key, value in song_profile['cluster_profile'].items():
+                            if isinstance(value, (int, float)):
+                                st.write(f"• {key}: {value:.3f}")
+            
+            # Trouver des chansons similaires avec ML
+            if st.button("Trouver des chansons similaires (ML)"):
+                with st.spinner("Analyse ML en cours..."):
+                    method = st.session_state.get('recommendation_method', 'cluster_cosine')
+                    similar_tracks = recommender.recommander_songs_similaires(
+                        selected_index, 
+                        n_recommendations=5, 
+                        method=method
+                    )
+                    
+                    if not similar_tracks.empty:
+                        st.session_state['similar_tracks_ml'] = similar_tracks
+                        st.rerun()
+                    else:
+                        st.error("Aucune chanson similaire trouvée.")
+            
+            # Afficher les recommandations
+            if 'similar_tracks_ml' in st.session_state:
+                similar_tracks = st.session_state['similar_tracks_ml']
+                
+                st.markdown("---")
+                st.subheader("Chansons recommendées par l'IA :")
+                
+                # Statistiques des recommandations
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("Recommandations", len(similar_tracks))
+                with col2:
+                    avg_similarity = similar_tracks['similarity_score'].mean()
+                    st.metric("Similarité moyenne", f"{avg_similarity:.3f}")
+                with col3:
+                    clusters_in_reco = similar_tracks['cluster'].nunique()
+                    st.metric("Clusters représentés", clusters_in_reco)
+                
+                # Affichage des recommandations avec scores
+                for idx, (reco_idx, track) in enumerate(similar_tracks.iterrows()):
+                    with st.expander(
+                        f"{track['track_name']} - {track['artist_name']} "
+                        f"(Similarité: {track['similarity_score']:.3f}, Cluster: {track['cluster']})"
+                    ):
+                        embed_url = f"https://open.spotify.com/embed/track/{track['track_id']}"
+                        st.markdown(
+                            f"""
+                            <iframe style="border-radius:12px" src="{embed_url}" width="100%" height="152" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
+                            """,
+                            unsafe_allow_html=True 
+                        )
+                
+                # Graphique de comparaison avec la première recommandation
+                if len(similar_tracks) > 0:
+                    first_recommendation = similar_tracks.iloc[0]
+                    
+                    st.markdown("---")
+                    st.subheader("Comparaison des caractéristiques (ML)")
+                    
+                    comparison_chart = create_ml_comparison_chart(
+                        selected_track, first_recommendation, recommender
+                    )
+                    
+                    if comparison_chart:
+                        st.plotly_chart(comparison_chart, use_container_width=True)
+                        
+                        # Tableau de comparaison détaillé
+                        comparison_data = {
+                            'Caractéristique': recommender.features,
+                            'Chanson sélectionnée': [round(selected_track.get(col, 0), 3) for col in recommender.features],
+                            'Meilleure recommandation': [round(first_recommendation.get(col, 0), 3) for col in recommender.features]
+                        }
+                        
+                        comparison_df = pd.DataFrame(comparison_data)
+                        st.dataframe(comparison_df, use_container_width=True)
+        
+        # Bouton pour réinitialiser
+        if st.button("Recommencer la découverte"):
+            keys_to_remove = [
+                'diverse_tracks_ml', 'selected_track_ml', 'selected_track_index', 
+                'similar_tracks_ml', 'recommendation_method'
+            ]
+            for key in keys_to_remove:
+                if key in st.session_state:
+                    del st.session_state[key]
+            st.rerun()
 
 
 
@@ -369,6 +807,12 @@ def create_spotify_playlist(track_ids, playlist_name):
 def load_data():
     return pd.read_csv('../data/df_final.csv')
 
+# Instancie ton recommender une seule fois au début (ou dans une condition pour éviter de le recharger plusieurs fois)
+@st.cache_resource  # pour ne pas le recréer à chaque interaction
+def load_recommender():
+    model_path = 'meilleur_modele.pkl'  
+    data_path = '../data/df_final.csv' 
+    return MoodifyRecommender(model_path, data_path)
 
 
 
@@ -377,7 +821,8 @@ def load_data():
 
 
 
-
+# charge la variable de classe recommender
+recommender = load_recommender()
 
 # Chargement des variables d'environnement
 load_dotenv()
@@ -441,7 +886,7 @@ if choice == "Mood-to-Playlist":
             "Joyeux":      {"color": "#F9C74F", "tag_humeur": "#joyeux"},
             "Triste":      {"color": "#A9C8E2", "tag_humeur": "#triste"},
             "En colère":   {"color": "#F9844A", "tag_humeur": "#energique"},
-            "Dégoûté":     {"color": "#90BE6D", "tag_humeur": "#calme"},
+            "Dégoûté":     {"color": "#B5E3A1", "tag_humeur": "#calme"},
             "Angoissé":    {"color": "#BDB2FF", "tag_humeur": "#calme"}
         }
 
@@ -681,128 +1126,7 @@ elif choice == "Activity-to-Playlist":
 
 #----- Fonctionnalité chanson pour chanson-----#
 elif choice == "Song-to-Song":
-    st.header("Découverte musicale : d'une chanson à l'autre")
-    
-    # Sidebar pour sélection du genre
-    selected_genre = st.selectbox("Choisissez votre genre de prédilection :", 
-                                  df['genre'].dropna().unique())
-    
-    # Filtrer le dataset par genre
-    df_genre = df[df['genre'] == selected_genre].copy()
-    
-    if df_genre.empty:
-        st.warning("Aucune chanson trouvée pour ce genre.")
-    else:
-        st.write(f"**{len(df_genre)} chansons disponibles dans le genre {selected_genre}**")
-        
-        # Identifier les colonnes de caractéristiques audio disponibles
-        audio_features_cols = ['danceability', 'energy', 'valence', 'acousticness', 
-                              'instrumentalness', 'speechiness', 'liveness']
-        available_audio_cols = [col for col in audio_features_cols if col in df_genre.columns]
-        
-        if not available_audio_cols:
-            st.info("ℹLes caractéristiques audio ne sont pas disponibles dans le dataset. La sélection sera basée sur d'autres critères.")
-        
-        # Sélectionner 5 tracks diverses
-        if st.button("Découvrir 5 chansons variées"):
-            with st.spinner("Sélection de chansons variées..."):
-                diverse_tracks = select_diverse_tracks(df_genre, 5)
-                st.session_state['diverse_tracks'] = diverse_tracks
-        
-        # Afficher les 5 tracks si elles existent
-        if 'diverse_tracks' in st.session_state:
-            st.subheader("Choisissez une chanson parmi ces 5 options variées :")
-            
-            # Créer les colonnes pour l'affichage
-            cols = st.columns(5)
-            
-            selected_track_id = None
-            
-            for idx, (_, track) in enumerate(st.session_state['diverse_tracks'].iterrows()):
-                with cols[idx]:
-                    # Image de l'album
-                    image_url = get_album_image_url_cached(track['track_id'])
-                    if image_url:
-                        st.image(image_url, width=120)
-                    
-                    # Informations de la track
-                    st.write(f"**{track['track_name'][:20]}{'...' if len(track['track_name']) > 20 else ''}**")
-                    st.write(f"*{track['artist_name'][:15]}{'...' if len(track['artist_name']) > 15 else ''}*")
-                    
-                    # Bouton de sélection
-                    if st.button(f"Choisir", key=f"select_{track['track_id']}"):
-                        selected_track_id = track['track_id']
-                        st.session_state['selected_track'] = track
-            
-            # Si une track est sélectionnée ou déjà en session
-            if 'selected_track' in st.session_state:
-                selected_track = st.session_state['selected_track']
-                
-                st.markdown("---")
-                st.subheader("Chanson sélectionnée :")
-
-                # Lecteur Spotify intégré
-                embed_url = f"https://open.spotify.com/embed/track/{selected_track['track_id']}"
-                st.markdown(
-                    f"""
-                    <iframe style="border-radius:12px" src="{embed_url}" width="100%" height="152" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
-                    """,
-                    unsafe_allow_html=True 
-                    )
-
-                # Trouver une chanson similaire
-                if st.button("Trouver une chanson similaire"):
-                    with st.spinner("Recherche d'une chanson similaire..."):
-                        similar_track = find_similar_track(selected_track, df_genre, available_audio_cols)
-                        if similar_track is not None:
-                            st.session_state['similar_track'] = similar_track
-                            st.rerun()
-                        else:
-                            st.error("Aucune chanson similaire trouvée.")
-                
-                if 'similar_track' in st.session_state:
-                    similar_track = st.session_state['similar_track']
-                    
-                    st.markdown("---")
-                    st.subheader("Chanson recommandée :")
-
-   
-                    # Lecteur intégré Spotify pour la chanson recommandée
-                    embed_url = f"https://open.spotify.com/embed/track/{similar_track['track_id']}"
-                    st.markdown(
-                        f"""
-                        <iframe style="border-radius:12px" src="{embed_url}" width="100%" height="152" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
-                        """,
-                        unsafe_allow_html=True 
-                    )
-                    # Graphique de comparaison
-                    if available_audio_cols:
-                        st.markdown("---")
-                        st.subheader("Comparaison des caractéristiques audio")
-                        
-                        comparison_chart = create_comparison_chart(
-                            selected_track, similar_track, available_audio_cols
-                        )
-                        
-                        if comparison_chart:
-                            st.plotly_chart(comparison_chart, use_container_width=True)
-                            
-                            # Tableau de comparaison
-                            comparison_data = {
-                                'Caractéristique': available_audio_cols,
-                                'Chanson sélectionnée': [round(selected_track.get(col, 0), 3) for col in available_audio_cols],
-                                'Chanson recommandée': [round(similar_track.get(col, 0), 3) for col in available_audio_cols]
-                            }
-                            
-                            comparison_df = pd.DataFrame(comparison_data)
-                            st.dataframe(comparison_df, use_container_width=True)
-        
-        # Bouton pour réinitialiser
-        if st.button("Recommencer la découverte"):
-            for key in ['diverse_tracks', 'selected_track', 'similar_track']:
-                if key in st.session_state:
-                    del st.session_state[key]
-            st.rerun()
+    song_to_song_ml_section()
 
 # ----- Fonctionalité BONUS ------ #
 
