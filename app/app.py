@@ -1126,7 +1126,115 @@ elif choice == "Activity-to-Playlist":
 
 #----- Fonctionnalité chanson pour chanson-----#
 elif choice == "Song-to-Song":
-    song_to_song_ml_section()
+    st.header("Découverte musicale : d'une chanson à l'autre")
+    
+    selected_genre = st.selectbox("Choisissez votre genre de prédilection :", 
+                                  df['genre'].dropna().unique())
+    
+    df_genre = df[df['genre'] == selected_genre].copy()
+    
+    if df_genre.empty:
+        st.warning("Aucune chanson trouvée pour ce genre.")
+    else:
+        st.write(f"**{len(df_genre)} chansons disponibles dans le genre {selected_genre}**")
+        
+        audio_features_cols = ['danceability', 'energy', 'valence', 'acousticness', 
+                              'instrumentalness', 'speechiness', 'liveness']
+        available_audio_cols = [col for col in audio_features_cols if col in df_genre.columns]
+        
+        if not available_audio_cols:
+            st.info("Les caractéristiques audio ne sont pas disponibles dans le dataset. La sélection sera basée sur d'autres critères.")
+        
+        if st.button("Découvrir 5 chansons variées"):
+            with st.spinner("Sélection de chansons variées..."):
+                diverse_tracks = select_diverse_tracks(df_genre, 5)
+                st.session_state['diverse_tracks'] = diverse_tracks
+        
+        if 'diverse_tracks' in st.session_state:
+            st.subheader("Choisissez une chanson parmi ces 5 options variées :")
+            
+            cols = st.columns(5)
+            
+            for idx, (_, track) in enumerate(st.session_state['diverse_tracks'].iterrows()):
+                with cols[idx]:
+                    image_url = get_album_image_url_cached(track['track_id'])
+                    if image_url:
+                        st.image(image_url, width=120)
+                    
+                    st.write(f"**{track['track_name'][:20]}{'...' if len(track['track_name']) > 20 else ''}**")
+                    st.write(f"*{track['artist_name'][:15]}{'...' if len(track['artist_name']) > 15 else ''}*")
+                    
+                    if st.button(f"Choisir", key=f"select_{track['track_id']}"):
+                        st.session_state['selected_track'] = track
+                        st.rerun()
+
+            if 'selected_track' in st.session_state:
+                selected_track = st.session_state['selected_track']
+                
+                st.markdown("---")
+                st.subheader("Chanson sélectionnée :")
+                
+
+                # CORRECTION : Lecteur Spotify intégré
+                embed_url = f"https://open.spotify.com/embed/track/{selected_track['track_id']}"
+                st.markdown(
+                    f"""
+                    <iframe style="border-radius:12px" src="{embed_url}" width="100%" height="152" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
+                    """,
+                    unsafe_allow_html=True 
+                    )
+
+                if st.button("Trouver une chanson similaire"):
+                    with st.spinner("Recherche d'une chanson similaire..."):
+                        similar_track = find_similar_track(selected_track, df_genre, available_audio_cols)
+                        if similar_track is not None:
+                            st.session_state['similar_track'] = similar_track
+                            st.rerun()
+                        else:
+                            st.error("Aucune chanson similaire trouvée.")
+                
+                if 'similar_track' in st.session_state:
+                    similar_track = st.session_state['similar_track']
+                    
+                    st.markdown("---")
+                    st.subheader("Chanson recommandée :")
+                    
+               
+                    
+                    # CORRECTION : Lecteur Spotify pour la chanson recommandée
+                    embed_url = f"https://open.spotify.com/embed/track/{similar_track['track_id']}"
+                    st.markdown(
+                        f"""
+                        <iframe style="border-radius:12px" src="{embed_url}" width="100%" height="152" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
+                        """,
+                        unsafe_allow_html=True 
+                    )
+
+                    if available_audio_cols:
+                        st.markdown("---")
+                        st.subheader("Comparaison des caractéristiques audio")
+                        
+                        comparison_chart = create_comparison_chart(
+                            selected_track, similar_track, available_audio_cols
+                        )
+                        
+                        if comparison_chart:
+                            st.plotly_chart(comparison_chart, use_container_width=True)
+                            
+                            comparison_data = {
+                                'Caractéristique': available_audio_cols,
+                                'Chanson sélectionnée': [round(selected_track.get(col, 0), 3) for col in available_audio_cols],
+                                'Chanson recommandée': [round(similar_track.get(col, 0), 3) for col in available_audio_cols]
+                            }
+                            
+                            comparison_df = pd.DataFrame(comparison_data)
+                            st.dataframe(comparison_df, use_container_width=True)
+        
+        if st.button("Recommencer la découverte"):
+            for key in ['diverse_tracks', 'selected_track', 'similar_track']:
+                if key in st.session_state:
+                    del st.session_state[key]
+            st.rerun()
 
 # ----- Fonctionalité BONUS ------ #
 
@@ -1193,47 +1301,7 @@ elif choice == "Track-by-Audio-Preferences":
             unsafe_allow_html=True,
         )
 
-        st.subheader("Comparaison des caractéristiques audio ")
 
-        # Préparer les données pour le radar
-        fig = go.Figure()
-
-        # Tracé des préférences utilisateur
-        fig.add_trace(go.Scatterpolar(
-            r=[user_preferences[feat] for feat in features],
-            theta=[feat.capitalize() for feat in features],
-            fill='toself',
-            name='Préférences utilisateur',
-            line_color='deepskyblue'
-        ))
-
-        # Tracé du morceau sélectionné
-        fig.add_trace(go.Scatterpolar(
-            r=[closest_track[feat] for feat in features],
-            theta=[feat.capitalize() for feat in features],
-            fill='toself',
-            name='Chanson proposée',
-            line_color='gold'
-        ))
-
-        fig.update_layout(
-            polar=dict(
-                radialaxis=dict(visible=True, range=[0, 1])
-            ),
-            showlegend=True,
-            height=500
-        )
-
-        st.plotly_chart(fig, use_container_width=True)
-
-        # Affichage des valeurs détaillées (facultatif)
-        with st.expander("Détails numériques "):
-            for feature in features  :
-                st.metric(
-                    label=feature.capitalize(),
-                    value=f"{closest_track[feature]:.2f}",
-                    delta=f"{closest_track[feature] - user_preferences[feature]:+.2f}"
-                )
 
 
 st.markdown("---")
